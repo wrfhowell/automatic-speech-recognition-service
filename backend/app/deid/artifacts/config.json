@@ -1,0 +1,18 @@
+{
+  "encoder": "prajjwal1/bert-tiny",
+  "num_labels": 13,
+  "max_length": 384,
+  "n_candidates": 2500,
+  "n_train": 2000,
+  "n_val": 300,
+  "n_eval_dense": 150,
+  "seed_train": 13,
+  "seed_val": 14,
+  "seed_eval": 15,
+  "epochs": 4,
+  "batch_size": 32,
+  "lr_head": 0.0005,
+  "lr_encoder": 0.0001,
+  "alpha": 0.5,
+  "gamma": 2.0
+}

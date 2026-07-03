@@ -39,11 +39,16 @@ _BARE_YEAR_RE = re.compile(r"\b(?:19|20)\d{2}\b")
 _PHONE_RE = re.compile(r"\(?\d{3}\)?[-. ]\d{3}[-. ]\d{4}\b")
 _MRN_PREFIXED_RE = re.compile(r"\b(?:mrn)[-:\s]*(\d{6,9})\b", re.IGNORECASE)
 _MRN_BARE_RE = re.compile(r"\b\d{7,8}\b")
-_AGE_RE = re.compile(r"\b(\d{1,3})([-\s]year[-\s]old)\b", re.IGNORECASE)
-_AGE_CTX_RE = re.compile(r"\b(?:age[d:]?|turned)\s+(\d{1,3})\b", re.IGNORECASE)
+_AGE_RE = re.compile(r"\b(\d{1,3})([-\s]years?[-\s]old)\b", re.IGNORECASE)
+_AGE_CTX_RE = re.compile(r"\b(?:age[d:]?|turned|passed at)\s+(\d{1,3})\b", re.IGNORECASE)
+_CITY = r"[A-Z][a-z'-]+(?:\s[A-Z][a-z'-]+)?"
 _LOC_CTX_RE = re.compile(
-    r"\b(of|in|from|to)\s+([A-Z][a-z'-]+(?:\s[A-Z][a-z'-]+)?)(,\s*[A-Z]{2})?"
+    rf"\b(of|in|from|to|outside|near)\s+(?:the\s+)?({_CITY})(,\s*[A-Z]{{2}})?"
 )
+_LOC_FACILITY_RE = re.compile(
+    rf"\b({_CITY})\s+(?:medical center|general hospital|family practice|campus|clinic)\b"
+)
+_LOC_FIELD_RE = re.compile(rf"\bcity:\s*({_CITY})(,\s*[A-Z]{{2}})?")
 
 
 @dataclass(frozen=True)
@@ -58,12 +63,16 @@ class AnnotatorConfig:
     age_include_suffix: bool = False  # "47-year-old" vs "47"
 
 
+# Three of five include the MRN prefix: "MRN-1234567" fills carry the
+# prefix inside the gold span, so the majority convention must cover it
+# (recall-first: over-extend, never under-extend). A1/A5 still dissent.
 CONFIGS: list[AnnotatorConfig] = [
     AnnotatorConfig(),  # A1: conservative baseline
     AnnotatorConfig(include_titles=True, mrn_include_prefix=True),           # A2
-    AnnotatorConfig(bare_years=True, age_include_suffix=True),               # A3
+    AnnotatorConfig(bare_years=True, age_include_suffix=True,
+                    mrn_include_prefix=True),                                # A3
     AnnotatorConfig(extend_phone=True, age_include_suffix=True,
-                    mrn_bare_digits=False),                                  # A4
+                    mrn_bare_digits=False, mrn_include_prefix=True),         # A4
     AnnotatorConfig(small_gazetteer=True, loc_include_prep=True),            # A5
 ]
 K = len(CONFIGS)
@@ -137,6 +146,11 @@ def _locs(text: str, cfg: AnnotatorConfig) -> list[Span]:
         start = m.start() if cfg.loc_include_prep else m.start(2)
         end = m.end(3) if m.group(3) else m.end(2)
         spans.append((start, end, "LOC"))
+    for m in _LOC_FACILITY_RE.finditer(text):
+        spans.append((m.start(1), m.end(1), "LOC"))
+    for m in _LOC_FIELD_RE.finditer(text):
+        end = m.end(2) if m.group(2) else m.end(1)
+        spans.append((m.start(1), end, "LOC"))
     return spans
 
 
@@ -193,8 +207,9 @@ def soft_labels(text: str, offsets: list[tuple[int, int]]) -> list[list[float]]:
     """[T, 13] fractional teacher distribution: mean of K one-hot votes."""
     votes = [spans_to_bio_ids(spans, offsets) for spans in annotate_ensemble(text)]
     n_tokens = len(offsets)
-    dist = [[0.0] * NUM_LABELS for _ in range(n_tokens)]
+    counts = [[0] * NUM_LABELS for _ in range(n_tokens)]
     for annotator in votes:
         for t, label_id in enumerate(annotator):
-            dist[t][label_id] += 1.0 / K
-    return dist
+            counts[t][label_id] += 1
+    # Single division keeps each cell an exact k/K float (0.6, not 3*0.2).
+    return [[c / K for c in row] for row in counts]
