@@ -50,6 +50,19 @@ services:
       postgres:
         condition: service_healthy
 
+  worker:
+    build: ./backend
+    command: ["arq", "app.workers.main.WorkerSettings"]
+    environment: *backend-env
+    # No restart policy on purpose: `docker compose kill -s SIGKILL worker`
+    # stays dead until restarted — that's the crash-recovery demo.
+    restart: "no"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
   api:
     build: ./backend
     environment: *backend-env

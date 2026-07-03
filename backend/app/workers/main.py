@@ -1,6 +1,7 @@
 import random
 
 from arq.connections import RedisSettings
+from arq.cron import cron
 
 from app.config import get_settings
 from app.core.asr_client import AsrClient
@@ -9,6 +10,7 @@ from app.core.db import create_engine, create_sessionmaker
 from app.core.logging import configure_logging, get_logger
 from app.core.semaphore import AsrSemaphore
 from app.workers.process_chunk import process_chunk
+from app.workers.reconciler import reconcile
 from app.workers.stitch_job import stitch_job
 
 log = get_logger(__name__)
@@ -45,8 +47,16 @@ async def shutdown(ctx: dict) -> None:
     await ctx["engine"].dispose()
 
 
+def _reconciler_seconds() -> set[int]:
+    """arq cron fires on seconds-within-minute; e.g. interval 60 -> {0},
+    interval 15 -> {0, 15, 30, 45}."""
+    interval = max(1, min(60, get_settings().reconciler_interval_seconds))
+    return set(range(0, 60, interval))
+
+
 class WorkerSettings:
     functions = [process_chunk, stitch_job]
+    cron_jobs = [cron(reconcile, second=_reconciler_seconds())]
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
