@@ -1,9 +1,11 @@
 """De-identification stage contract.
 
 stitch_job depends only on this interface: deidentify(text) -> DeidResult.
-Currently an identity stub; replaced by the CIPHER student model (M10-M15).
+The CIPHER student loads lazily behind a per-process singleton, so
+importing app.deid stays cheap (no torch) until the first real call.
 """
 
+import threading
 from dataclasses import dataclass, field
 
 
@@ -20,5 +22,16 @@ class DeidResult:
     spans: list[PhiSpan] = field(default_factory=list)
 
 
+_deidentifier = None
+_load_lock = threading.Lock()
+
+
 def deidentify(text: str) -> DeidResult:
-    return DeidResult(masked_text=text)
+    global _deidentifier
+    if _deidentifier is None:
+        with _load_lock:
+            if _deidentifier is None:
+                from app.deid.inference import Deidentifier
+
+                _deidentifier = Deidentifier.from_artifacts()
+    return _deidentifier(text)

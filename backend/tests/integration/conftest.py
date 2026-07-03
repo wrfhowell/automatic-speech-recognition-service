@@ -18,6 +18,20 @@ from app.main import create_app
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
 
+@pytest.fixture(autouse=True)
+def identity_deid(request, monkeypatch):
+    """Integration tests exercise stitch orchestration, not the model:
+    patch deid to identity so they stay fast and text-independent. Opt out
+    with @pytest.mark.real_deid to run the committed student for real."""
+    if request.node.get_closest_marker("real_deid"):
+        return
+    from app.deid import DeidResult
+
+    monkeypatch.setattr(
+        "app.workers.stitch_job.deidentify", lambda text: DeidResult(masked_text=text)
+    )
+
+
 @pytest.fixture(scope="session")
 def database_url():
     with PostgresContainer("postgres:16-alpine", driver="asyncpg") as pg:

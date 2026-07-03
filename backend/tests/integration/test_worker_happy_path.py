@@ -38,7 +38,7 @@ async def test_happy_path_two_chunks_to_completed_job(app, worker_ctx):
         job = await session.get(Job, job_id)
         assert job.status == "COMPLETED"
         assert job.transcript_text == "first part\n\nsecond part"
-        assert job.transcript_deid == "first part\n\nsecond part"  # identity stub
+        assert job.transcript_deid == "first part\n\nsecond part"  # identity-patched deid
         assert job.completed_time is not None
 
 
