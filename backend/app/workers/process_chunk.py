@@ -34,6 +34,7 @@ async def finish_chunk(
     *,
     transcript: str | None = None,
     error: str | None = None,
+    attempts: int | None = None,
 ) -> None:
     """Move a chunk to a terminal state and decrement the job's
     pending_chunks — in ONE transaction (the core correctness pattern).
@@ -43,17 +44,20 @@ async def finish_chunk(
     row-lock serializes decrements, so exactly one caller observes 0 and
     enqueues the stitch (after commit; reconciler query C covers a crash
     in the commit->enqueue gap)."""
+    values: dict = {
+        "status": terminal_status.value,
+        "transcript_text": transcript,
+        "last_error": error,
+        "updated_at": _now(),
+    }
+    if attempts is not None:
+        values["attempts"] = attempts
     async with sessionmaker() as session:
         transitioned = (
             await session.execute(
                 update(Chunk)
                 .where(Chunk.id == chunk_id, Chunk.status.notin_(_TERMINAL_CHUNK_VALUES))
-                .values(
-                    status=terminal_status.value,
-                    transcript_text=transcript,
-                    last_error=error,
-                    updated_at=_now(),
-                )
+                .values(**values)
                 .returning(Chunk.job_id)
             )
         ).first()
@@ -184,6 +188,9 @@ async def process_chunk(ctx: dict, chunk_id_str: str) -> None:
             await finish_chunk(
                 sessionmaker, ctx["arq_pool"], chunk_id, ChunkStatus.FAILED,
                 error=result.detail,
+                # Persist the final increment on transient exhaustion (the
+                # earlier increments were persisted by the PENDING reverts).
+                attempts=attempts if result.kind == AsrKind.TRANSIENT else None,
             )
             log.warning("chunk failed permanently chunk_id=%s attempts=%d", chunk_id, attempts)
         case RetryAction.RETRY:
