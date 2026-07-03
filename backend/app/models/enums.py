@@ -1,0 +1,28 @@
+from enum import StrEnum
+
+
+class JobStatus(StrEnum):
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    COMPLETED_WITH_ERRORS = "COMPLETED_WITH_ERRORS"
+    FAILED = "FAILED"
+
+
+class ChunkStatus(StrEnum):
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+
+TERMINAL_JOB_STATUSES = (
+    JobStatus.COMPLETED,
+    JobStatus.COMPLETED_WITH_ERRORS,
+    JobStatus.FAILED,
+)
+TERMINAL_CHUNK_STATUSES = (ChunkStatus.COMPLETED, ChunkStatus.FAILED)
+
+
+class AuditAction(StrEnum):
+    RAW_READ = "RAW_READ"
