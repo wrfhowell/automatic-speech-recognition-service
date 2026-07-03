@@ -1,0 +1,96 @@
+# Backend Transcription Take-Home
+
+You're tasked with building an audio transcription service that transcribes audio files of patient/provider conversations and returns transcripts. Clients will submit jobs containing chunks of audio they would like transcribed and stitched into a single transcript. For now, these audio chunks will just be one of a few hardcoded URI strings. You will not implement the ASR (Automatic Speech Recognition) model directly — we'll provide mocked APIs which simulate making an API call to an ASR model hosted on another machine.
+
+## What we're evaluating
+
+Build this **as if you were shipping it to production at Ambience**, not as a proof of concept. The closer your submitted code is to a real production system, the stronger the signal. We'll evaluate both your system design and your implementation.
+
+## ASR characteristics
+
+- The ASR model service can only process audio chunks ≤ 5 minutes in length
+    - You can assume the chunks clients send you will be ≤ 5 mins
+- Each call to the ASR model has non-trivial latency 5-10s, but we’d still like to be able to return the full transcript to the client within 20 seconds in the happy case.
+- The ASR model service has some flakiness
+    - anticipate 1/20 of requests to fail transiently
+    - some audio segments will always fail
+- The ASR model enforces a concurrency limit of 100 simultaneous requests (although this number will increase in the future). Going over this value may result in a ban, or financial implications from this third-party vendor.
+
+## Your Service requirements (functional)
+
+Your service should support the following interface:
+
+```
+POST /transcribe
+  input:
+	  audioChunkPaths=string[]
+	  userId=string
+  returns:
+		jobId=string
+
+Type: TranscriptResult {
+    transcriptText=string
+    chunkStatuses={ audioPath: chunkStatus }
+    jobStatus=string,
+		completedTime=DateTime/ISOString/etc
+}
+
+GET /transcript/{jobId}
+  returns: TranscriptResult
+
+GET /transcript/search
+	Accepts queryParams:
+		jobStatus=string
+    userId=string
+  returns:
+		TranscriptResult[]
+```
+
+## Your Service requirements (Non functional)
+
+1. **Fault tolerance** — jobs resume gracefully after a server/worker restart (implies a persistence layer for in-flight job state).
+2. **ASR concurrency limit adherence** — your service must not exceed 100 simultaneous ASR requests. Going over this limit may result in vendor bans or financial penalties.
+3. **Latency** — end-to-end transcript latency should target <20s in the happy path. Parallelize ASR calls within the concurrency budget.
+4. **Scalability** - the system is able to scale without requiring a complete redesign
+
+## Scale
+
+- **You need to support 1,000 daily active users today.**
+- **We expect traffic to grow ~10x within 6 months** as we sign new enterprise contracts. Your system should be scalable so we can grow into that.
+- **In your presentation and/or system diagram, walk us through how your design handles this growth** — which levers you'd pull, what scales as-is, what needs to change, and the tradeoffs you considered.
+
+Workload datapoints to anchor sizing:
+
+- 1000 Daily active users, 8 hour shifts, 30 minute visits (expect Daily active users to scale to 10k in 6 months)
+- Visits are usually 30 minutes, but sometimes can spike to 120 minutes
+- Human speech generally contains ~140 words per minute
+- Audio files are ~ 1MB per minute
+
+## Time budget
+
+Time-box this to ~**8 hours**.
+
+## AI tools
+
+**We encourage you to use AI tools** (Claude Code, Cursor, Copilot, etc.) — this is how we work day-to-day. Feel free to check in any prompts, agent configs, test harnesses, or tooling you built alongside your code; we'll review them as part of your submission. 
+
+## Language and frameworks
+
+Use the language and framework you're most familiar with. This isn't the time to learn something new — we want to see you at your best.
+
+## Deliverables
+
+Build your solution in a **private git repository**.
+
+Please share your **GitHub handle** with your recruiter/coordinator so we can match access correctly and avoid username/email mismatches. When you're ready to schedule your presentation, let your recruiter know and share your **availability for a 1-hour Google Meet discussion.**
+
+Once your presentation is scheduled, your recruiter/coordinator will let you know the **2–3 specific interviewers and hiring managers** to add as collaborators on your repo. Please add them **at least 24 hours before your presentation** so they can review your code and prepare focused questions.
+
+Here are some things we look for in take-home submissions & presentations:
+
+- System design that covers all functional requirements
+- Clear system design diagram and excellent communication in presentation
+- Clean, correct, and maintainable code with live working demo
+- Deep understanding of technologies and frameworks used in project
+
+##

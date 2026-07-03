@@ -1,0 +1,38 @@
+flowchart LR
+  subgraph Clients
+    C["React console<br/>Vite + TS + TanStack Query<br/>polls job status 1s"]
+  end
+
+  subgraph Our_System["Our system (stateless, horizontally scalable)"]
+    LB[Load balancer]
+    API["API Service ×N<br/>FastAPI + Pydantic<br/>POST /transcribe · GET /transcript/:id · GET /transcript/search"]
+    Q[["arq chunk queue<br/>(Redis)"]]
+    W["Async Workers ×M (arq)<br/>httpx · retry w/ exp backoff + jitter<br/>circuit breaker on ASR"]
+    SEM{{"Global ASR semaphore<br/>Redis · cap 90 of 100<br/>TTL leases reclaim crashed permits"}}
+    ST["Stitcher<br/>ordinal concat · [chunk unavailable] markers"]
+    DEID["Deid stage (CIPHER student, app/deid)<br/>encoder + CRF · ~50ms/doc<br/>in-process for demo · separate svc in prod"]
+    REC["Reconciler cron<br/>re-enqueue stuck chunks (60s)"]
+  end
+
+  subgraph Data
+    PG[("Postgres — source of truth<br/>jobs · chunks<br/>idx(user_id, status, created_at)")]
+  end
+
+  subgraph Vendor
+    ASR["ASR model service<br/>≤5 min chunks · 5–10s latency<br/>1/20 transient failures<br/>HARD 100 concurrent limit"]
+  end
+
+  C -->|1. POST /transcribe| LB --> API
+  API -->|2. TX: insert job + chunks| PG
+  API -->|3. enqueue chunk tasks| Q
+  API -->|4. 202 jobId| C
+  Q --> W
+  W -->|5. acquire permit| SEM
+  W -->|6. GET /get-asr-output| ASR
+  W -->|7. release permit, persist chunk| PG
+  W -->|8. last chunk done| ST
+  ST --> DEID
+  ST -->|transcript_deid + transcript_text, terminal status| PG
+  C -->|9. poll GET /transcript/:id| API -->|read| PG
+  REC -.->|scan stuck| PG
+  REC -.->|re-enqueue| Q

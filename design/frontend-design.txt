@@ -1,0 +1,407 @@
+Design style
+
+
+
+Design System Prompt (copy this)
+
+Build a frontend with an Edward Tufte–inspired design language: warm paper, ink-on-parchment typography, evidence-first layouts, and almost no decorative chrome. The UI should feel like a beautifully typeset field journal or analytical monograph — not a SaaS dashboard, not Material Design, not a dark-mode app.
+
+
+
+---
+
+
+
+## Design philosophy
+
+
+
+- **High data-ink ratio.** Every pixel should carry information or structure. No gratuitous gradients, glassmorphism, drop shadows, or hero blobs.
+
+- **Typography is the UI.** Hierarchy comes from font choice, size, weight, and spacing — not from boxes, badges, or loud colors.
+
+- **Warm analog paper.** The background is aged parchment, not white (#fff) and not gray (#f5f5f5). Surfaces are slightly darker/warmer layers of the same family.
+
+- **Structure through hairlines.** Use 1px borders and horizontal rules to divide sections. Avoid card shadows. When you need elevation, use a slightly warmer surface color (`surface`, `surface-2`) and a border.
+
+- **Tufte patterns for long-form / analytical content:**
+
+  - Sidenotes in the right margin: small italic serif, left border, muted color
+
+  - Custom inline SVG figures with direct labeling (no chart-library defaults)
+
+  - Sparklines, small multiples, and annotated diagrams over dashboard widgets
+
+  - Large serif headlines with tight line-height; body prose at comfortable measure (~65ch)
+
+  - Evidence cards: thin border, faint background, mono label + serif number + muted caption
+
+- **Restraint with accent color.** One warm terracotta accent for links, hover states on titles, and errors. Category colors (teal, green, gold, purple) are muted and semantic — never neon.
+
+- **Metadata as first-class UI.** Dates, IDs, section labels, and counters live in a dedicated narrow column or in mono uppercase — they are part of the design, not afterthoughts.
+
+
+
+---
+
+
+
+## Color palette (CSS custom properties)
+
+
+
+```css
+
+--color-base:        #f7efe4;   /* page background — warm cream parchment */
+
+--color-surface:     #EFE8D6;   /* cards, inputs, hover targets */
+
+--color-surface-2:   #EAE2D0;   /* secondary surfaces, hover states */
+
+--color-surface-3:   #E4DCCA;   /* tertiary, selection highlight, buttons */
+
+--color-border:      #D8D0BE;   /* primary dividers */
+
+--color-border-light:#CCC4B2;   /* stronger dividers, active borders */
+
+--color-ink:         #2a2824;   /* primary text — warm near-black */
+
+--color-muted:       #6a665c;   /* secondary text */
+
+--color-faint:       #9a9688;   /* tertiary text, labels, timestamps */
+
+--color-accent:      #c4522a;   /* links, emphasis, errors — terracotta/rust */
+
+--color-teal:        #4a7a8f;   /* semantic: data, IDs, technical */
+
+--color-green:       #5a7a4e;   /* semantic: success, nature, health */
+
+--color-gold:        #8a6a1a;   /* semantic: reading, finds, archive */
+
+--color-purple:      #6a5a7a;   /* semantic: thoughts, essays */
+
+--color-tag:         #E8E0CE;   /* tag/chip backgrounds */
+
+
+
+Theme color for mobile browser chrome: #F3ECDC.
+
+Never use pure black (#000) or pure white (#fff). Never use saturated primaries. All colors should feel like ink, clay, and aged paper.
+
+
+
+Typography
+
+Font stack (load from Google Fonts + Adobe Fonts if available):
+
+Role
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Google Fonts link:
+
+IBM Plex Mono (300, 400, 500) · Instrument Serif (regular + italic) · Caveat (400, 600)
+
+
+
+Type scale:
+
+Base body: 18px, weight 400
+Prose/body copy: 15px, font-light, leading-[1.75]
+Page titles: 1.35rem–1.45rem, font-medium, tracking-wide
+Section eyebrows: 10px mono, tracking-[2px–3px], uppercase, text-faint
+Section headers (feed dates): 21px, font-bold, uppercase, tracking-wide
+Display headlines (presentations): Instrument Serif 2.4rem–3.4rem, leading-[1.05], tracking-tight, max-w-[16ch–22ch]
+Slide body headlines: Instrument Serif 1.4rem–1.8rem, leading-snug
+Metadata (timestamps, relative dates): 14px, text-faint, tracking-wide
+Entry IDs / technical refs: 14px, font-mono, text-teal
+Tags/chips: 10–12px, uppercase, tracking-[1px–1.5px]
+Small UI (buttons, counters): 9–11px, mono, tracking-widest
+Rules:
+
+Headlines = Instrument Serif. Body = Warnock/Palatino. Labels/metadata = IBM Plex Mono uppercase.
+Never use sans-serif for body text.
+Bold is rare; prefer font-medium or font-light with color contrast.
+Use tabular-nums on numeric displays.
+
+
+Layout & spacing
+
+Page shell:
+
+Max content width: 1320px, centered
+Horizontal padding: px-8 md:px-16
+Vertical padding: py-10
+Left sidebar nav: ~11.5rem, sticky top-10
+Main + right sidebar grid: grid-cols-[minmax(0,1fr)_340px] with border-r border-border on main
+Prose/article max width: max-w-xl (~576px) or max-w-prose (~65ch)
+Presentation slides: max-w-[64rem] with lg:grid-cols-[minmax(0,1fr)_14rem] for sidenote column
+Entry/list item pattern (use everywhere for feed-like content):
+
+grid grid-cols-[80px_1fr] gap-x-4 py-5
+
+Left column = metadata (time, date, ID). Right column = content.
+
+Section label pattern:
+
+flex items-center gap-2 text-[16px] tracking-[2px] uppercase text-faint
+
+  + flex-1 h-px bg-border   ← hairline extends to fill
+
+
+
+Spacing rhythm:
+
+Section gaps: mb-8 to mb-10
+Component internal gaps: gap-4 to gap-6
+Tight metadata stacks: gap-0.5
+Footer/header dividers: border-t border-border pt-4
+Sticky elements: Sidebars, timeline nav, and section nav stick at top-10 (40px from viewport top).
+
+
+
+Components & interaction patterns
+
+Navigation:
+
+Text + small inline SVG icons (1.25px stroke, no fill-heavy icons)
+Active state: text-ink bg-surface/80, not a colored pill
+Hover: text-muted → text-ink, subtle background shift
+Focus: ring-2 ring-border ring-offset-2 ring-offset-base — never bright blue focus rings
+Tags / filters:
+
+Small uppercase chips: px-1.5–2 py-0.5 rounded-sm bg-tag
+Category text colors from semantic palette (teal, gold, green, purple, accent)
+Active filter: border-border-light text-ink bg-surface-2
+Inactive: border-transparent text-faint hover:border-border-light
+Cards (essays, featured items):
+
+rounded-md border border-border bg-surface px-4 py-3.5
+Hover: bg-surface-2 border-border-light
+Title hover: text-accent (terracotta)
+CTA: text-[11px] tracking-[2px] uppercase text-faint with → arrow nudge on hover
+List row hover:
+
+hover:bg-surface-2 hover:-mx-2 hover:px-2 hover:rounded — content expands into padding, no shadow
+Inputs:
+
+bg-surface-2 border border-border font-mono text-[11px] px-2 py-1.5 rounded
+Focus: border-border-light only — no glow
+Placeholder: text-faint
+Buttons (secondary):
+
+bg-surface-3 border border-border font-mono text-[10px] tracking-widest rounded
+Hover: bg-border text-ink
+Disabled: opacity-40
+Images:
+
+Always border border-border, rounded-md or rounded-sm
+Evidence photos: aspect-ratio container, object-cover, bg-surface/20
+Thumbnails: small squares h-9 w-9 with border, no shadow
+Lightbox/modal:
+
+Backdrop: rgba(40,36,28,0.88) with slight blur — warm dark, not #000000cc
+Close control: mono [esc], faint gray, no button chrome
+Timeline / progress nav:
+
+Hairline vertical track: w-px bg-border
+Dots: 5px circles, bg-border-light inactive → bg-muted active
+Labels appear on hover; active label always visible
+Slide progress: tiny dots w-1.5 h-1.5, fixed right margin, mono counter 01 / 17
+
+
+Tufte-style presentation slides (for long-form / storytelling)
+
+When building scroll-driven presentations or analytical pages:
+
+Full-viewport scroll container: snap-y snap-mandatory, each slide h-screen snap-start
+Layout: main content + 14rem sidenote column on desktop
+Sidenotes: text-[12px] leading-relaxed text-muted italic font-serif border-l border-border pl-4
+Eyebrows: font-mono text-[10px] tracking-[3px] uppercase text-faint
+Evidence stat cards: border border-border p-4 bg-surface/40 with mono label + serif number + 12px muted caption
+SVG figures: Ink strokeColor var(--color-ink), faint guides var(--color-faint), direct labels in mono (data) and serif (descriptions). No gridlines unless essential. No chart junk.
+Keyboard nav: ArrowUp/Down, PageUp/Down, Home/End between slides
+Back link: fixed top-left, font-mono tracking-[3px] uppercase text-muted
+
+
+Motion & polish
+
+Animations are subtle and purposeful only:
+Entry fade-in: opacity 0 → 1, translateY(-14px → 0), 0.45s ease-out, staggered 50ms
+Highlight pulse: brief surface-3 background flash
+Chip appear: small translateY(-8px → 0) fade
+No bounce, spring, or parallax on UI chrome
+Transitions: transition-colors duration-200 on interactive elements
+Hide scrollbars globally (scrollbar-width: none)
+Text selection: background: surface-3, color: ink
+
+
+What to avoid
+
+❌ Sans-serif body fonts (Inter, Roboto, system-ui for prose)
+❌ Dark mode or high-contrast black/white
+❌ Box shadows, neumorphism, glassmorphism
+❌ Rounded-full pill buttons, large border-radius cards
+❌ Bright blue links, purple gradients, Tailwind default palette
+❌ Heavy icon libraries — use minimal inline SVGs with thin strokes
+❌ Dashboard grids with stat cards showing giant numbers in sans-serif
+❌ Modals with white backgrounds and drop shadows
+❌ Chart.js / Recharts default styling — build custom SVG or match this palette exactly
+❌ Centered hero sections with gradient backgrounds
+❌ "Clean minimal" that reads as generic startup — this should feel literary and analytical
+
+
+Tech stack preferences (if applicable)
+
+React + Tailwind CSS v4 with @theme custom properties for colors/fonts
+CSS variables referenced as Tailwind tokens (text-ink, bg-surface, font-mono, etc.)
+React Router for navigation
+No component library (no shadcn/MUI/Chakra defaults) — build from these tokens
+
+
+Tone check
+
+When done, the app should feel like:
+
+A beautifully printed analytical essay you found in a university library
+Field notes from someone who cares deeply about the data
+Tufte's Visual Display of Quantitative Information crossed with a warm personal journal
+NOT like: Notion, Linear, Vercel, Stripe, or any generic Tailwind UI kit.
+
+
+
+---
+
+
+
+## Optional: paste your exact CSS theme block
+
+
+
+If you want the new project to match pixel-for-pixel, include this at the top of the prompt:
+
+
+
+```css
+
+@import "tailwindcss";
+
+
+
+@theme {
+
+  --font-body: "warnock-pro", "Palatino", "Palatino Linotype", "Palatino LT STD", "Book Antiqua", "Georgia", serif;
+
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --font-serif: "Instrument Serif", serif;
+
+  --font-hand: "Caveat", cursive;
+
+
+
+  --color-base: #f7efe4;
+
+  --color-surface: #EFE8D6;
+
+  --color-surface-2: #EAE2D0;
+
+  --color-surface-3: #E4DCCA;
+
+  --color-border: #D8D0BE;
+
+  --color-border-light: #CCC4B2;
+
+  --color-ink: #2a2824;
+
+  --color-muted: #6a665c;
+
+  --color-faint: #9a9688;
+
+  --color-accent: #c4522a;
+
+  --color-teal: #4a7a8f;
+
+  --color-green: #5a7a4e;
+
+  --color-gold: #8a6a1a;
+
+  --color-purple: #6a5a7a;
+
+  --color-tag: #E8E0CE;
+
+}
+
+
+
+html, body {
+
+  min-height: 100vh;
+
+  background: var(--color-base);
+
+  color: var(--color-ink);
+
+  font-family: var(--font-body);
+
+  font-size: 18px;
+
+  font-weight: 400;
+
+}

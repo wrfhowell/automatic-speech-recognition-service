@@ -1,0 +1,47 @@
+sequenceDiagram
+  autonumber
+  participant C as Client
+  participant API as API Service
+  participant PG as Postgres
+  participant Q as Queue (arq/Redis)
+  participant W as Worker pool
+  participant S as Redis semaphore (cap 90)
+  participant ASR as ASR vendor
+  participant D as Deid svc (CIPHER)
+
+  C->>API: POST /transcribe {6 chunk paths, userId}
+  API->>PG: TX insert job(PENDING) + 6 chunks(PENDING)
+  API->>Q: enqueue 6 chunk tasks
+  API-->>C: 202 {jobId}   (t ≈ 10ms)
+
+  par 6 chunks fan out in parallel
+    Q->>W: chunk task
+    W->>S: acquire permit (TTL lease 30s)
+    W->>ASR: GET /get-asr-output?path=...
+    ASR-->>W: 200 transcript (5–10s)
+    W->>S: release permit
+    W->>PG: chunk → COMPLETED + text
+  and one chunk hits the 1/20 transient failure
+    W->>ASR: GET /get-asr-output?path=chunk-4
+    ASR-->>W: 500
+    W->>S: release permit
+    Note over W: backoff ~1s + jitter, attempt 2/4
+    W->>S: re-acquire permit
+    W->>ASR: retry chunk-4
+    ASR-->>W: 200 transcript
+    W->>PG: chunk → COMPLETED
+  end
+
+  W->>PG: last chunk terminal → claim stitch
+  W->>W: concat in ordinal order
+  W->>D: POST stitched text
+  D-->>W: BIO spans (~50ms) → mask [NAME] [DATE] [MRN]
+  W->>PG: job → COMPLETED, transcript_deid, completedTime
+
+  loop client polls
+    C->>API: GET /transcript/{jobId}
+    API->>PG: read
+    API-->>C: TranscriptResult (deid by default)
+  end
+
+  Note over C,D: happy path ≈ 10s · with one retry ≈ 20s · budget met
