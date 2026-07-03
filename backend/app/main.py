@@ -1,5 +1,8 @@
+import uuid
 from contextlib import asynccontextmanager
 
+from arq import create_pool
+from arq.connections import RedisSettings
 from fastapi import FastAPI
 from redis.asyncio import Redis
 
@@ -7,6 +10,7 @@ from app.api import health, transcribe, transcript
 from app.config import get_settings
 from app.core.db import create_engine, create_sessionmaker
 from app.core.logging import configure_logging
+from app.workers.queueing import enqueue_pending_chunks
 
 
 @asynccontextmanager
@@ -18,7 +22,14 @@ async def lifespan(app: FastAPI):
     app.state.engine = engine
     app.state.sessionmaker = create_sessionmaker(engine)
     app.state.redis = Redis.from_url(settings.redis_url)
+    app.state.arq_pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
+
+    async def enqueue_job_chunks(job_id: uuid.UUID) -> None:
+        await enqueue_pending_chunks(app.state.arq_pool, app.state.sessionmaker, job_id)
+
+    app.state.enqueue_job_chunks = enqueue_job_chunks
     yield
+    await app.state.arq_pool.aclose()
     await app.state.redis.aclose()
     await engine.dispose()
 
