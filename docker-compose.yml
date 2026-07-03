@@ -1,0 +1,59 @@
+x-backend-env: &backend-env
+  DATABASE_URL: postgresql+asyncpg://asr:asr@postgres:5432/asr
+  REDIS_URL: redis://redis:6379/0
+  ASR_BASE_URL: http://mock-asr:3001
+  ASR_MAX_CONCURRENCY: ${ASR_MAX_CONCURRENCY:-90}
+  ASR_LEASE_TTL_SECONDS: ${ASR_LEASE_TTL_SECONDS:-30}
+  ASR_TIMEOUT_SECONDS: ${ASR_TIMEOUT_SECONDS:-15}
+  RETRY_MAX_ATTEMPTS: ${RETRY_MAX_ATTEMPTS:-4}
+  RETRY_BASE_DELAY: ${RETRY_BASE_DELAY:-0.5}
+  RETRY_MAX_DELAY: ${RETRY_MAX_DELAY:-8}
+  CHUNK_STUCK_SECONDS: ${CHUNK_STUCK_SECONDS:-120}
+  RECONCILER_INTERVAL_SECONDS: ${RECONCILER_INTERVAL_SECONDS:-60}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: asr
+      POSTGRES_PASSWORD: asr
+      POSTGRES_DB: asr
+    ports:
+      # 5433 on the host: avoids colliding with a locally-installed postgres
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U asr -d asr"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  mock-asr:
+    build: ./mock-asr
+    ports:
+      - "3000:3001"
+
+  api:
+    build: ./backend
+    environment: *backend-env
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').status==200 else 1)\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
