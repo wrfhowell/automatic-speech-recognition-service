@@ -78,3 +78,11 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      api:
+        condition: service_healthy

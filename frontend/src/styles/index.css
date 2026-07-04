@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@theme {
+  --font-body: "warnock-pro", "Palatino", "Palatino Linotype", "Palatino LT STD",
+    "Book Antiqua", "Georgia", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-serif: "Instrument Serif", serif;
+  --font-hand: "Caveat", cursive;
+
+  --color-base: #f7efe4;
+  --color-surface: #efe8d6;
+  --color-surface-2: #eae2d0;
+  --color-surface-3: #e4dcca;
+  --color-border: #d8d0be;
+  --color-border-light: #ccc4b2;
+  --color-ink: #2a2824;
+  --color-muted: #6a665c;
+  --color-faint: #9a9688;
+  --color-accent: #c4522a;
+  --color-teal: #4a7a8f;
+  --color-green: #5a7a4e;
+  --color-gold: #8a6a1a;
+  --color-purple: #6a5a7a;
+  --color-tag: #e8e0ce;
+}
+
+html,
+body {
+  min-height: 100vh;
+  background: var(--color-base);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 18px;
+  font-weight: 400;
+}
+
+/* Hide scrollbars globally — structure comes from hairlines, not chrome. */
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
+::selection {
+  background: var(--color-surface-3);
+  color: var(--color-ink);
+}
+
+/* Warm focus ring — never bright blue. */
+:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-base),
+    0 0 0 4px var(--color-border-light);
+}
+
+@keyframes entry-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.entry-appear {
+  animation: entry-fade-in 0.45s ease-out both;
+}
+
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.status-pulse {
+  animation: soft-pulse 1.6s ease-in-out infinite;
+}
