@@ -1,0 +1,15 @@
+[
+  "O",
+  "B-NAME",
+  "I-NAME",
+  "B-DATE",
+  "I-DATE",
+  "B-PHONE",
+  "I-PHONE",
+  "B-MRN",
+  "I-MRN",
+  "B-LOC",
+  "I-LOC",
+  "B-AGE",
+  "I-AGE"
+]

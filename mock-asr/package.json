@@ -1,0 +1,20 @@
+{
+  "name": "asr-sample-service",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "main": "asr-server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node asr-server.js | pino-pretty"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "fastify": "^4.20.0",
+    "pino-pretty": "^10.2.0"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "overall_recall": 0.9820531227566404,
+  "per_type_recall": {
+    "NAME": 0.9667519181585678,
+    "DATE": 1.0,
+    "PHONE": 1.0,
+    "MRN": 1.0,
+    "LOC": 0.9340659340659341,
+    "AGE": 1.0
+  },
+  "masked_char_precision": 0.9863600935307872,
+  "n_docs": 150,
+  "n_gold_spans": 1393,
+  "gold_spans_per_type": {
+    "NAME": 391,
+    "DATE": 366,
+    "PHONE": 187,
+    "MRN": 155,
+    "LOC": 182,
+    "AGE": 112
+  },
+  "caveat": "Evaluated on synthetic, in-distribution data only. The CIPHER paper reports a ~19-point F1 drop moving from synthetic evaluation to real clinical text; treat these numbers as an upper bound that certifies the pipeline, not as clinical-grade performance.",
+  "train_seconds": 43.8,
+  "args": {
+    "epochs": 4,
+    "batch_size": 32,
+    "lr_head": 0.0005,
+    "lr_encoder": 0.0001,
+    "seed": 13,
+    "alpha": 0.5,
+    "hard_labels": false,
+    "gamma": 2.0,
+    "no_crf_loss": false,
+    "artifacts_dir": "/Users/will/dev/asr-sample-service/backend/app/deid/artifacts"
+  }
+}

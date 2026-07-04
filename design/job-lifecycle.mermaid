@@ -1,0 +1,34 @@
+stateDiagram-v2
+  direction LR
+
+  state "Job lifecycle" as J {
+    [*] --> J_PENDING: POST /transcribe<br/>(job + chunks committed atomically)
+    J_PENDING --> J_PROCESSING: first chunk picked up
+    J_PROCESSING --> J_COMPLETED: all chunks COMPLETED<br/>→ stitch → deid → persist
+    J_PROCESSING --> J_COMPLETED_WITH_ERRORS: ≥1 chunk FAILED, ≥1 COMPLETED<br/>failed chunks inlined as [chunk N unavailable]
+    J_PROCESSING --> J_FAILED: all chunks FAILED
+    J_COMPLETED --> [*]
+    J_COMPLETED_WITH_ERRORS --> [*]
+    J_FAILED --> [*]
+  }
+
+  state "Chunk lifecycle (per audio path)" as CH {
+    [*] --> C_PENDING: enqueued
+    C_PENDING --> C_PROCESSING: worker acquires ASR permit
+    C_PROCESSING --> C_COMPLETED: 200 → persist text
+    C_PROCESSING --> C_RETRY: 500 / timeout (transient, ~1/20)<br/>release permit · backoff + jitter
+    C_RETRY --> C_PROCESSING: attempt ≤ 4
+    C_RETRY --> C_FAILED: attempts exhausted (poison chunk)
+    C_PROCESSING --> C_FAILED: 404 (permanent, no retry)
+    C_PROCESSING --> C_PENDING: worker crash →<br/>permit TTL expires · task redelivered<br/>(idempotent handler re-checks status)
+    C_COMPLETED --> [*]
+    C_FAILED --> [*]
+  }
+
+  note right of CH
+    Invariants:
+    • every transition persisted to Postgres before acted on
+    • terminal states immutable
+    • reconciler re-enqueues anything stuck > deadline
+    • 429 from ASR = limiter bug → circuit breaker + alert
+  end note
