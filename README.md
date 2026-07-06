@@ -60,7 +60,7 @@ make up
 1. **Happy path + partial failure** — on [Submit](http://localhost:5173), keep the pre-selected chunks and tick *"include a chunk that always fails"* (`audio-file-8.wav`). Submit, then watch the chunk ledger: parallel fan-out completes healthy chunks in seconds; the poison chunk burns 4 attempts (dots in the ledger) and the job lands `COMPLETED_WITH_ERRORS` with an inline `[chunk N unavailable]` marker in the transcript.
 2. **De-identification** — the transcript renders with `[NAME]`, `[DATE]`, `[MRN]`… mask chips. The *show raw* toggle reveals the original text — every raw read writes an `audit_log` row (`?view=raw` server-side).
 3. **Crash recovery** — mid-job, `docker compose kill -s SIGKILL worker`. The UI stalls (the worker has no restart policy, on purpose). `docker compose start worker` — the reconciler re-enqueues stuck chunks and the job completes. Crashed workers' semaphore permits self-expire via TTL, so the vendor budget is never leaked.
-4. **Concurrency proof** — open [System](http://localhost:5173/system) and run `make loadtest` (40 jobs × 8 chunks — naive parallelism would be 320 concurrent ASR calls). The high-water mark climbs toward, and never past, the cap. A committed run: [design/loadtest-results.md](design/loadtest-results.md).
+4. **Concurrency proof** — open [System](http://localhost:5173/system) and press **Run burst** (or run `make loadtest` for a scored report) (40 jobs × 8 chunks — naive parallelism would be 320 concurrent ASR calls). The high-water mark climbs toward, and never past, the cap. A committed run: [design/loadtest-results.md](design/loadtest-results.md).
 
 ## Tests
 

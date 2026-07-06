@@ -53,6 +53,15 @@ export function opsQuery() {
   });
 }
 
+/** Burst-submit synthetic jobs; the polled ops counters show the effect. */
+export async function runLoadTest(): Promise<{ jobsSubmitted: number }> {
+  const { data, response } = await client.POST("/ops/loadtest", {
+    body: { jobs: 40, chunks: 8 },
+  });
+  if (!data) throw new HttpError(response.status);
+  return data;
+}
+
 export interface SearchFilters {
   jobStatus?: string;
   userId?: string;

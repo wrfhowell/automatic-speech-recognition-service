@@ -71,6 +71,16 @@ class LatencyStats(ApiModel):
     p95_seconds: float | None
 
 
+class LoadTestRequest(ApiModel):
+    jobs: int = Field(default=40, ge=1, le=100)
+    chunks: int = Field(default=8, ge=1, le=8)
+
+
+class LoadTestResponse(ApiModel):
+    jobs_submitted: int
+    chunks_submitted: int
+
+
 class OpsResponse(ApiModel):
     semaphore: SemaphoreStats
     queue: QueueStats

@@ -6,21 +6,81 @@ Counts and numbers only — transcript text and audio paths never appear here.
 
 from arq.constants import default_queue_name
 from fastapi import APIRouter, Depends, Request
-from sqlalchemy import func, select
+from sqlalchemy import func, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_session
 from app.api.schemas import (
     ChunkStats,
     LatencyStats,
+    LoadTestRequest,
+    LoadTestResponse,
     OpsResponse,
     QueueStats,
     SemaphoreStats,
 )
 from app.core.semaphore import HWM_KEY, LEASES_KEY
-from app.models import Chunk, Job
+from app.models import Chunk, ChunkStatus, Job, JobStatus
 
 router = APIRouter()
+
+# Every healthy mock path (audio-file-8.wav is the poison chunk): transient
+# 1/20 failures get retried, so a burst must land all-COMPLETED.
+HEALTHY_PATHS = [f"audio-file-{n}.wav" for n in (1, 2, 3, 4, 5, 6, 7, 9)]
+
+
+@router.post("/ops/loadtest", status_code=202, response_model=LoadTestResponse)
+async def loadtest(
+    body: LoadTestRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> LoadTestResponse:
+    """Burst-submit synthetic jobs so the System panel shows the semaphore
+    working the vendor cap live. Same insert-then-enqueue path as /transcribe;
+    the high-water mark is reset so the burst is measured from zero."""
+    await request.app.state.redis.delete(HWM_KEY)
+
+    paths = HEALTHY_PATHS[: body.chunks]
+    job_ids = (
+        (
+            await session.execute(
+                insert(Job).returning(Job.id),
+                [
+                    {
+                        "user_id": "loadtest",
+                        "status": JobStatus.PENDING.value,
+                        "pending_chunks": len(paths),
+                    }
+                    for _ in range(body.jobs)
+                ],
+            )
+        )
+        .scalars()
+        .all()
+    )
+    await session.execute(
+        insert(Chunk),
+        [
+            {
+                "job_id": job_id,
+                "ordinal": i,
+                "audio_path": path,
+                "status": ChunkStatus.PENDING.value,
+            }
+            for job_id in job_ids
+            for i, path in enumerate(paths)
+        ],
+    )
+    await session.commit()
+
+    enqueue = getattr(request.app.state, "enqueue_job_chunks", None)
+    if enqueue is not None:
+        for job_id in job_ids:
+            await enqueue(job_id)
+
+    return LoadTestResponse(
+        jobs_submitted=len(job_ids), chunks_submitted=len(job_ids) * len(paths)
+    )
 
 
 @router.get("/ops", response_model=OpsResponse)

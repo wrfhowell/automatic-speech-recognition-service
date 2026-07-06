@@ -27,6 +27,45 @@
         }
       }
     },
+    "/ops/loadtest": {
+      "post": {
+        "summary": "Loadtest",
+        "description": "Burst-submit synthetic jobs so the System panel shows the semaphore\nworking the vendor cap live. Same insert-then-enqueue path as /transcribe;\nthe high-water mark is reset so the burst is measured from zero.",
+        "operationId": "loadtest_ops_loadtest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoadTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoadTestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ops": {
       "get": {
         "summary": "Ops",
@@ -348,6 +387,44 @@
           "p95Seconds"
         ],
         "title": "LatencyStats"
+      },
+      "LoadTestRequest": {
+        "properties": {
+          "jobs": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Jobs",
+            "default": 40
+          },
+          "chunks": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Chunks",
+            "default": 8
+          }
+        },
+        "type": "object",
+        "title": "LoadTestRequest"
+      },
+      "LoadTestResponse": {
+        "properties": {
+          "jobsSubmitted": {
+            "type": "integer",
+            "title": "Jobssubmitted"
+          },
+          "chunksSubmitted": {
+            "type": "integer",
+            "title": "Chunkssubmitted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobsSubmitted",
+          "chunksSubmitted"
+        ],
+        "title": "LoadTestResponse"
       },
       "OpsResponse": {
         "properties": {

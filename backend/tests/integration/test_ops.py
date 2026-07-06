@@ -77,6 +77,39 @@ async def test_ops_reports_semaphore_queue_and_db_counters(client, app):
     assert data["latency"]["p95Seconds"] == pytest.approx(19.5)
 
 
+async def test_loadtest_submits_burst_and_resets_hwm(client, app):
+    from sqlalchemy import select
+
+    await app.state.redis.set(HWM_KEY, 74)  # stale mark from a previous burst
+
+    resp = await client.post("/ops/loadtest", json={"jobs": 3, "chunks": 2})
+    assert resp.status_code == 202
+    assert resp.json() == {"jobsSubmitted": 3, "chunksSubmitted": 6}
+
+    # The mark is reset so the new burst is measured from zero.
+    assert await app.state.redis.get(HWM_KEY) is None
+
+    async with app.state.sessionmaker() as session:
+        jobs = (
+            (await session.execute(select(Job).where(Job.user_id == "loadtest")))
+            .scalars()
+            .all()
+        )
+        assert len(jobs) == 3
+        assert all(j.status == JobStatus.PENDING.value for j in jobs)
+        chunk_count = len(
+            (await session.execute(select(Chunk))).scalars().all()
+        )
+        assert chunk_count == 6
+
+
+async def test_loadtest_rejects_out_of_range_burst(client):
+    resp = await client.post("/ops/loadtest", json={"jobs": 0, "chunks": 2})
+    assert resp.status_code == 422
+    resp = await client.post("/ops/loadtest", json={"jobs": 3, "chunks": 99})
+    assert resp.status_code == 422
+
+
 async def test_ops_empty_state_serves_zeros_not_errors(client):
     resp = await client.get("/ops")
     assert resp.status_code == 200

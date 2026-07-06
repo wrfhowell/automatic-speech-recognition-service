@@ -45,4 +45,8 @@ test("system panel reports live counters within the vendor cap", async ({ page }
   const [mark, capacity] = (await hwm.innerText()).split("/").map(Number);
   expect(capacity).toBeGreaterThan(0);
   expect(mark).toBeLessThanOrEqual(capacity);
+
+  // The burst trigger is present (not clicked — a real burst would starve
+  // the other specs of the vendor budget).
+  await expect(page.getByRole("button", { name: /run burst/i })).toBeEnabled();
 });

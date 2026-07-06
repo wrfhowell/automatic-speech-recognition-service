@@ -21,6 +21,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ops/loadtest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Loadtest
+         * @description Burst-submit synthetic jobs so the System panel shows the semaphore
+         *     working the vendor cap live. Same insert-then-enqueue path as /transcribe;
+         *     the high-water mark is reset so the burst is measured from zero.
+         */
+        post: operations["loadtest_ops_loadtest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ops": {
         parameters: {
             query?: never;
@@ -126,6 +148,26 @@ export interface components {
             p50Seconds: number | null;
             /** P95Seconds */
             p95Seconds: number | null;
+        };
+        /** LoadTestRequest */
+        LoadTestRequest: {
+            /**
+             * Jobs
+             * @default 40
+             */
+            jobs: number;
+            /**
+             * Chunks
+             * @default 8
+             */
+            chunks: number;
+        };
+        /** LoadTestResponse */
+        LoadTestResponse: {
+            /** Jobssubmitted */
+            jobsSubmitted: number;
+            /** Chunkssubmitted */
+            chunksSubmitted: number;
         };
         /** OpsResponse */
         OpsResponse: {
@@ -236,6 +278,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    loadtest_ops_loadtest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoadTestRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoadTestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

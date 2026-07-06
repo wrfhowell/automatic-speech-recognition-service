@@ -25,11 +25,8 @@ from redis.asyncio import Redis
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+from app.api.ops import HEALTHY_PATHS as PATHS  # noqa: E402
 from app.core.semaphore import HWM_KEY, LEASES_KEY  # noqa: E402
-
-# Every healthy path (audio-file-8.wav is the poison chunk): transient 1/20
-# failures get retried, so all jobs must land COMPLETED.
-PATHS = [f"audio-file-{n}.wav" for n in (1, 2, 3, 4, 5, 6, 7, 9)]
 TERMINAL = {"COMPLETED", "COMPLETED_WITH_ERRORS", "FAILED"}
 
 

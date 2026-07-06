@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { opsQuery } from "../api/queries";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { opsQuery, runLoadTest } from "../api/queries";
 import { JOB_STATUSES, statusColorClass } from "../api/types";
 import { EvidenceCard } from "../components/EvidenceCard";
 import { SectionLabel } from "../components/SectionLabel";
@@ -37,6 +37,7 @@ function StatusLedger({
 
 export function System() {
   const ops = useQuery(opsQuery());
+  const burst = useMutation({ mutationFn: runLoadTest });
 
   if (ops.isPending) {
     return (
@@ -70,6 +71,29 @@ export function System() {
           cross the vendor cap.
         </p>
       </header>
+
+      <section className="mb-8">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            disabled={burst.isPending}
+            onClick={() => burst.mutate()}
+            className="rounded border border-border bg-surface-3 px-4 py-2 font-mono text-[10px] tracking-widest uppercase transition-colors duration-200 hover:bg-border hover:text-ink disabled:opacity-40"
+          >
+            {burst.isPending ? "Submitting…" : "Run burst — 40 jobs × 8 chunks"}
+          </button>
+          <span className="font-mono text-[9px] tracking-widest uppercase text-faint">
+            {burst.isSuccess
+              ? `${burst.data.jobsSubmitted} jobs accepted — watch the high-water mark`
+              : "320 chunks contend for the vendor budget below"}
+          </span>
+        </div>
+        {burst.isError ? (
+          <p className="mt-3 text-[13px] text-accent">
+            The burst could not be submitted — {burst.error.message}.
+          </p>
+        ) : null}
+      </section>
 
       <section className="mb-8">
         <SectionLabel>ASR budget</SectionLabel>
