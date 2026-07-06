@@ -35,3 +35,14 @@ test("submit with poison chunk -> terminal job with masks and gap marker", async
   const strip = page.getByTestId("chunk-strip");
   await expect(strip.locator('[data-status="FAILED"]')).toHaveCount(1);
 });
+
+test("system panel reports live counters within the vendor cap", async ({ page }) => {
+  await page.goto("/system");
+
+  // The high-water mark card renders "hwm / capacity" and must respect the cap.
+  const hwm = page.getByTestId("hwm");
+  await expect(hwm).toBeVisible();
+  const [mark, capacity] = (await hwm.innerText()).split("/").map(Number);
+  expect(capacity).toBeGreaterThan(0);
+  expect(mark).toBeLessThanOrEqual(capacity);
+});
