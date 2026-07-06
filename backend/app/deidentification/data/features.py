@@ -6,7 +6,7 @@ import random
 import re
 import statistics
 
-from app.deid.data.generate import Document
+from app.deidentification.data.generate import Document
 
 N_FEATURES = 14
 

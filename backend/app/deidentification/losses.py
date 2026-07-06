@@ -19,13 +19,13 @@ import torch
 from torch import Tensor
 from torch.nn.functional import log_softmax, softmax
 
-from app.deid.crf import CRF
+from app.deidentification.crf import CRF
 
 
 def focal_soft_cross_entropy(
-    logits: Tensor,        # [B, T, L]
+    logits: Tensor,  # [B, T, L]
     soft_targets: Tensor,  # [B, T, L], rows sum to 1
-    mask: Tensor,          # [B, T]
+    mask: Tensor,  # [B, T]
     gamma: float = 2.0,
 ) -> Tensor:
     mask = mask.to(logits.dtype)
@@ -33,10 +33,10 @@ def focal_soft_cross_entropy(
     q = softmax(logits, dim=-1)
 
     teacher_argmax = soft_targets.argmax(dim=-1, keepdim=True)  # [B, T, 1]
-    p_hat = q.gather(-1, teacher_argmax).squeeze(-1)            # [B, T]
+    p_hat = q.gather(-1, teacher_argmax).squeeze(-1)  # [B, T]
     focal_weight = (1.0 - p_hat).detach() ** gamma
 
-    ce = -(soft_targets * log_q).sum(dim=-1)                    # [B, T]
+    ce = -(soft_targets * log_q).sum(dim=-1)  # [B, T]
     return (focal_weight * ce * mask).sum() / mask.sum().clamp(min=1)
 
 

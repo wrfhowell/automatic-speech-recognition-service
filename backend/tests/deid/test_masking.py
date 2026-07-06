@@ -1,5 +1,5 @@
-from app.deid import PhiSpan
-from app.deid.masking import apply_masks, bio_to_spans, merge_spans
+from app.deidentification import PhiSpan
+from app.deidentification.masking import apply_masks, bio_to_spans, merge_spans
 
 # "jane smith called from boston"
 #  0123456789012345678901234567890

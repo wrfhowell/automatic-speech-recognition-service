@@ -6,16 +6,16 @@ label may be wrong, but the characters must be masked. Anything less is a
 PHI leak. masked_char_precision (predicted-span chars that fall inside
 gold spans) is reported as the over-masking indicator.
 
-python -m app.deid.eval re-runs the committed artifacts against a freshly
+python -m app.deidentification.eval re-runs the committed artifacts against a freshly
 regenerated dense eval set and prints metrics.json-shaped output.
 """
 
 import json
 from collections.abc import Callable
 
-from app.deid import PhiSpan
-from app.deid.data.generate import Document
-from app.deid.labels import PHI_TYPES
+from app.deidentification import PhiSpan
+from app.deidentification.data.generate import Document
+from app.deidentification.labels import PHI_TYPES
 
 SYNTHETIC_CAVEAT = (
     "Evaluated on synthetic, in-distribution data only. The CIPHER paper "
@@ -54,7 +54,8 @@ def evaluate(predict: Callable[[str], list[PhiSpan]], docs: list[Document]) -> d
         for span in predicted:
             pred_chars += span.end - span.start
             pred_chars_in_gold += sum(
-                max(0, min(span.end, ge) - max(span.start, gs)) for gs, ge in gold_intervals
+                max(0, min(span.end, ge) - max(span.start, gs))
+                for gs, ge in gold_intervals
             )
 
     n_gold = sum(total.values())
@@ -62,7 +63,9 @@ def evaluate(predict: Callable[[str], list[PhiSpan]], docs: list[Document]) -> d
     return {
         "overall_recall": sum(recalled.values()) / n_gold if n_gold else None,
         "per_type_recall": per_type,
-        "masked_char_precision": pred_chars_in_gold / pred_chars if pred_chars else None,
+        "masked_char_precision": (
+            pred_chars_in_gold / pred_chars if pred_chars else None
+        ),
         "n_docs": len(docs),
         "n_gold_spans": n_gold,
         "gold_spans_per_type": total,
@@ -72,13 +75,15 @@ def evaluate(predict: Callable[[str], list[PhiSpan]], docs: list[Document]) -> d
 def passes_gate(metrics: dict) -> bool:
     if (metrics["overall_recall"] or 0) < RECALL_GATE_OVERALL:
         return False
-    return all((r or 0) >= RECALL_GATE_PER_TYPE for r in metrics["per_type_recall"].values())
+    return all(
+        (r or 0) >= RECALL_GATE_PER_TYPE for r in metrics["per_type_recall"].values()
+    )
 
 
 def main() -> None:
-    from app.deid.data.generate import generate_dense_eval
-    from app.deid.inference import Deidentifier
-    from app.deid.model import ARTIFACTS_DIR
+    from app.deidentification.data.generate import generate_dense_eval
+    from app.deidentification.inference import Deidentifier
+    from app.deidentification.model import ARTIFACTS_DIR
 
     config = json.loads((ARTIFACTS_DIR / "config.json").read_text())
     docs = generate_dense_eval(config["n_eval_dense"], seed=config["seed_eval"])

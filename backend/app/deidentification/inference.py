@@ -13,10 +13,10 @@ from pathlib import Path
 import torch
 from transformers import AutoTokenizer, PreTrainedTokenizerFast
 
-from app.deid import DeidResult, PhiSpan
-from app.deid.labels import ID_TO_LABEL
-from app.deid.masking import apply_masks, bio_to_spans, merge_spans
-from app.deid.model import ARTIFACTS_DIR, DeidStudent, load_student
+from app.deidentification import DeidResult, PhiSpan
+from app.deidentification.labels import ID_TO_LABEL
+from app.deidentification.masking import apply_masks, bio_to_spans, merge_spans
+from app.deidentification.model import ARTIFACTS_DIR, DeidStudent, load_student
 
 MAX_WORDPIECES = 128  # per segment, including [CLS]/[SEP]
 
@@ -39,7 +39,9 @@ def _split_oversized(
     text: str, start: int, end: int, tokenizer: PreTrainedTokenizerFast, budget: int
 ) -> list[tuple[int, int]]:
     """A single sentence longer than the budget: cut at wordpiece boundaries."""
-    enc = tokenizer(text[start:end], add_special_tokens=False, return_offsets_mapping=True)
+    enc = tokenizer(
+        text[start:end], add_special_tokens=False, return_offsets_mapping=True
+    )
     offsets = enc["offset_mapping"]
     pieces = []
     for i in range(0, len(offsets), budget):

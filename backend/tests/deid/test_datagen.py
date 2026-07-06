@@ -1,14 +1,14 @@
 import re
 
-from app.deid.data.features import (
+from app.deidentification.data.features import (
     N_FEATURES,
     doc_features,
     is_outlier,
     robust_z_scores,
     sample_training_set,
 )
-from app.deid.data.generate import generate_corpus, generate_dense_eval
-from app.deid.labels import PHI_TYPES
+from app.deidentification.data.generate import generate_corpus, generate_dense_eval
+from app.deidentification.labels import PHI_TYPES
 
 
 def test_spans_are_correct_by_construction():

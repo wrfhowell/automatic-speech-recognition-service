@@ -25,7 +25,7 @@ def identity_deid(request, monkeypatch):
     with @pytest.mark.real_deid to run the committed student for real."""
     if request.node.get_closest_marker("real_deid"):
         return
-    from app.deid import DeidResult
+    from app.deidentification import DeidResult
 
     monkeypatch.setattr(
         "app.workers.stitch_job.deidentify", lambda text: DeidResult(masked_text=text)
@@ -131,7 +131,8 @@ async def worker_ctx(app):
         "rng": random.Random(13),
         "arq_pool": FakeArqPool(),
         "semaphore": AsrSemaphore(
-            redis, capacity=settings.asr_max_concurrency,
+            redis,
+            capacity=settings.asr_max_concurrency,
             ttl_seconds=settings.asr_lease_ttl_seconds,
         ),
         "breaker": CircuitBreaker(
@@ -148,5 +149,7 @@ async def worker_ctx(app):
 
 @pytest_asyncio.fixture
 async def client(app):
-    async with httpx.AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+    async with httpx.AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as c:
         yield c

@@ -1,4 +1,4 @@
-"""python -m app.deid.train — distill the teacher ensemble into the student.
+"""python -m app.deidentification.train — distill the teacher ensemble into the student.
 
 Pipeline: 2,500 candidate docs -> outlier-aware sample of 2,000 train
 (+300 val, +150 entity-dense eval), teacher soft labels per wordpiece,
@@ -21,19 +21,23 @@ from pathlib import Path
 import torch
 from transformers import AutoTokenizer, PreTrainedTokenizerFast
 
-from app.deid.data.features import sample_training_set
-from app.deid.data.generate import Document, generate_corpus, generate_dense_eval
-from app.deid.eval import SYNTHETIC_CAVEAT, evaluate, passes_gate
-from app.deid.labels import LABELS, NUM_LABELS, O_ID
-from app.deid.losses import combined_loss, harden
-from app.deid.model import (
+from app.deidentification.data.features import sample_training_set
+from app.deidentification.data.generate import (
+    Document,
+    generate_corpus,
+    generate_dense_eval,
+)
+from app.deidentification.eval import SYNTHETIC_CAVEAT, evaluate, passes_gate
+from app.deidentification.labels import LABELS, NUM_LABELS, O_ID
+from app.deidentification.losses import combined_loss, harden
+from app.deidentification.model import (
     ARTIFACTS_DIR,
     ENCODER_NAME,
     TOKENIZER_NAME,
     pretrained_student,
     save_student,
 )
-from app.deid.teacher import soft_labels
+from app.deidentification.teacher import soft_labels
 
 MAX_LENGTH = 384  # docs are 2-5 short templates; bert-tiny caps at 512
 
@@ -49,14 +53,19 @@ N_EVAL_DENSE = 150
 @dataclass
 class Example:
     input_ids: torch.Tensor  # [T]
-    soft: torch.Tensor       # [T, NUM_LABELS]
+    soft: torch.Tensor  # [T, NUM_LABELS]
 
 
-def encode_docs(docs: list[Document], tokenizer: PreTrainedTokenizerFast) -> list[Example]:
+def encode_docs(
+    docs: list[Document], tokenizer: PreTrainedTokenizerFast
+) -> list[Example]:
     examples = []
     for doc in docs:
         enc = tokenizer(
-            doc.text, truncation=True, max_length=MAX_LENGTH, return_offsets_mapping=True
+            doc.text,
+            truncation=True,
+            max_length=MAX_LENGTH,
+            return_offsets_mapping=True,
         )
         soft = soft_labels(doc.text, enc["offset_mapping"])
         examples.append(
@@ -68,7 +77,9 @@ def encode_docs(docs: list[Document], tokenizer: PreTrainedTokenizerFast) -> lis
     return examples
 
 
-def collate(batch: list[Example], pad_id: int) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+def collate(
+    batch: list[Example], pad_id: int
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     max_len = max(len(ex.input_ids) for ex in batch)
     input_ids = torch.full((len(batch), max_len), pad_id, dtype=torch.long)
     mask = torch.zeros(len(batch), max_len, dtype=torch.long)
@@ -96,14 +107,24 @@ def run_epoch(model, examples, args, pad_id, *, optimizer=None, rng=None) -> flo
             with torch.no_grad():
                 logits = model(input_ids, mask)
                 parts = combined_loss(
-                    logits, soft, mask, model.crf,
-                    alpha=args.alpha, gamma=args.gamma, use_crf=not args.no_crf_loss,
+                    logits,
+                    soft,
+                    mask,
+                    model.crf,
+                    alpha=args.alpha,
+                    gamma=args.gamma,
+                    use_crf=not args.no_crf_loss,
                 )
         else:
             logits = model(input_ids, mask)
             parts = combined_loss(
-                logits, soft, mask, model.crf,
-                alpha=args.alpha, gamma=args.gamma, use_crf=not args.no_crf_loss,
+                logits,
+                soft,
+                mask,
+                model.crf,
+                alpha=args.alpha,
+                gamma=args.gamma,
+                use_crf=not args.no_crf_loss,
             )
             optimizer.zero_grad()
             parts.total.backward()
@@ -184,7 +205,9 @@ def main() -> None:
     started = time.monotonic()
     for epoch in range(1, args.epochs + 1):
         model.train()
-        train_loss = run_epoch(model, train_examples, args, pad_id, optimizer=optimizer, rng=rng)
+        train_loss = run_epoch(
+            model, train_examples, args, pad_id, optimizer=optimizer, rng=rng
+        )
         model.eval()
         val_loss = run_epoch(model, val_examples, args, pad_id)
         print(
@@ -194,7 +217,7 @@ def main() -> None:
         )
 
     print("evaluating on the entity-dense set...", flush=True)
-    from app.deid.inference import Deidentifier
+    from app.deidentification.inference import Deidentifier
 
     model.eval()
     deid = Deidentifier(model, tokenizer)
@@ -210,7 +233,9 @@ def main() -> None:
     artifacts.mkdir(parents=True, exist_ok=True)
     if slug:
         # Ablation: metrics only, never the shipped weights.
-        (artifacts / f"metrics_{slug}.json").write_text(json.dumps(metrics, indent=2) + "\n")
+        (artifacts / f"metrics_{slug}.json").write_text(
+            json.dumps(metrics, indent=2) + "\n"
+        )
         print(f"ablation metrics -> metrics_{slug}.json")
         return
 

@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 from faker.providers.person.en_US import Provider as PersonProvider
 
-from app.deid.labels import LABEL_TO_ID, NUM_LABELS
+from app.deidentification.labels import LABEL_TO_ID, NUM_LABELS
 
 Span = tuple[int, int, str]  # (start, end, PHI type)
 
@@ -24,9 +24,7 @@ _LAST_NAMES = {n.lower() for n in PersonProvider.last_names}
 _FIRST_SMALL = {n for i, n in enumerate(sorted(_FIRST_NAMES)) if i % 2 == 0}
 _LAST_SMALL = {n for i, n in enumerate(sorted(_LAST_NAMES)) if i % 2 == 0}
 
-_MONTHS = (
-    "january|february|march|april|may|june|july|august|september|october|november|december"
-)
+_MONTHS = "january|february|march|april|may|june|july|august|september|october|november|december"
 _TITLE_RE = r"(?:dr|mr|ms|mrs)\.?\s+"
 _WORD_RE = re.compile(r"[a-z][a-z'-]*", re.IGNORECASE)
 
@@ -40,7 +38,9 @@ _PHONE_RE = re.compile(r"\(?\d{3}\)?[-. ]\d{3}[-. ]\d{4}\b")
 _MRN_PREFIXED_RE = re.compile(r"\b(?:mrn)[-:\s]*(\d{6,9})\b", re.IGNORECASE)
 _MRN_BARE_RE = re.compile(r"\b\d{7,8}\b")
 _AGE_RE = re.compile(r"\b(\d{1,3})([-\s]years?[-\s]old)\b", re.IGNORECASE)
-_AGE_CTX_RE = re.compile(r"\b(?:age[d:]?|turned|passed at)\s+(\d{1,3})\b", re.IGNORECASE)
+_AGE_CTX_RE = re.compile(
+    r"\b(?:age[d:]?|turned|passed at)\s+(\d{1,3})\b", re.IGNORECASE
+)
 _CITY = r"[A-Z][a-z'-]+(?:\s[A-Z][a-z'-]+)?"
 _LOC_CTX_RE = re.compile(
     rf"\b(of|in|from|to|outside|near)\s+(?:the\s+)?({_CITY})(,\s*[A-Z]{{2}})?"
@@ -53,13 +53,13 @@ _LOC_FIELD_RE = re.compile(rf"\bcity:\s*({_CITY})(,\s*[A-Z]{{2}})?")
 
 @dataclass(frozen=True)
 class AnnotatorConfig:
-    include_titles: bool = False      # NAME span swallows "dr. " etc.
-    bare_years: bool = False          # tags 1985 alone as DATE
-    extend_phone: bool = False        # phone span swallows trailing period
+    include_titles: bool = False  # NAME span swallows "dr. " etc.
+    bare_years: bool = False  # tags 1985 alone as DATE
+    extend_phone: bool = False  # phone span swallows trailing period
     mrn_include_prefix: bool = False  # span covers "MRN-1234567" vs digits
-    mrn_bare_digits: bool = True      # 7-8 bare digits are MRN
-    small_gazetteer: bool = False     # misses ~half of names
-    loc_include_prep: bool = False    # "of boston" instead of "boston"
+    mrn_bare_digits: bool = True  # 7-8 bare digits are MRN
+    small_gazetteer: bool = False  # misses ~half of names
+    loc_include_prep: bool = False  # "of boston" instead of "boston"
     age_include_suffix: bool = False  # "47-year-old" vs "47"
 
 
@@ -68,12 +68,17 @@ class AnnotatorConfig:
 # (recall-first: over-extend, never under-extend). A1/A5 still dissent.
 CONFIGS: list[AnnotatorConfig] = [
     AnnotatorConfig(),  # A1: conservative baseline
-    AnnotatorConfig(include_titles=True, mrn_include_prefix=True),           # A2
-    AnnotatorConfig(bare_years=True, age_include_suffix=True,
-                    mrn_include_prefix=True),                                # A3
-    AnnotatorConfig(extend_phone=True, age_include_suffix=True,
-                    mrn_bare_digits=False, mrn_include_prefix=True),         # A4
-    AnnotatorConfig(small_gazetteer=True, loc_include_prep=True),            # A5
+    AnnotatorConfig(include_titles=True, mrn_include_prefix=True),  # A2
+    AnnotatorConfig(
+        bare_years=True, age_include_suffix=True, mrn_include_prefix=True
+    ),  # A3
+    AnnotatorConfig(
+        extend_phone=True,
+        age_include_suffix=True,
+        mrn_bare_digits=False,
+        mrn_include_prefix=True,
+    ),  # A4
+    AnnotatorConfig(small_gazetteer=True, loc_include_prep=True),  # A5
 ]
 K = len(CONFIGS)
 
@@ -87,7 +92,11 @@ def _names(text: str, cfg: AnnotatorConfig) -> list[Span]:
     for i, w in enumerate(words[:-1]):
         nxt = words[i + 1]
         gap = text[w.end() : nxt.start()]
-        if gap.strip() == "" and w.group().lower() in firsts and nxt.group().lower() in lasts:
+        if (
+            gap.strip() == ""
+            and w.group().lower() in firsts
+            and nxt.group().lower() in lasts
+        ):
             start = w.start()
             if cfg.include_titles:
                 m = re.search(_TITLE_RE + r"$", text[: w.start()], re.IGNORECASE)
@@ -96,17 +105,23 @@ def _names(text: str, cfg: AnnotatorConfig) -> list[Span]:
             spans.append((start, nxt.end(), "NAME"))
             used.update((i, i + 1))
     # Lone first names, only with a conversational/title cue right before.
-    cue = re.compile(r"(?:morning|afternoon|thanks,?|so|daughter|with)\s+$", re.IGNORECASE)
+    cue = re.compile(
+        r"(?:morning|afternoon|thanks,?|so|daughter|with)\s+$", re.IGNORECASE
+    )
     for i, w in enumerate(words):
         if i in used or w.group().lower() not in firsts:
             continue
-        if cue.search(text[: w.start()]) or re.search(_TITLE_RE + r"$", text[: w.start()], re.IGNORECASE):
+        if cue.search(text[: w.start()]) or re.search(
+            _TITLE_RE + r"$", text[: w.start()], re.IGNORECASE
+        ):
             spans.append((w.start(), w.end(), "NAME"))
     return spans
 
 
 def _dates(text: str, cfg: AnnotatorConfig) -> list[Span]:
-    spans = [(m.start(), m.end(), "DATE") for rx in _DATE_RES for m in rx.finditer(text)]
+    spans = [
+        (m.start(), m.end(), "DATE") for rx in _DATE_RES for m in rx.finditer(text)
+    ]
     if cfg.bare_years:
         covered = [(s, e) for s, e, _ in spans]
         for m in _BARE_YEAR_RE.finditer(text):

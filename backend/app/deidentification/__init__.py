@@ -2,7 +2,7 @@
 
 stitch_job depends only on this interface: deidentify(text) -> DeidResult.
 The CIPHER student loads lazily behind a per-process singleton, so
-importing app.deid stays cheap (no torch) until the first real call.
+importing app.deidentification stays cheap (no torch) until the first real call.
 """
 
 import threading
@@ -31,7 +31,7 @@ def deidentify(text: str) -> DeidResult:
     if _deidentifier is None:
         with _load_lock:
             if _deidentifier is None:
-                from app.deid.inference import Deidentifier
+                from app.deidentification.inference import Deidentifier
 
                 _deidentifier = Deidentifier.from_artifacts()
     return _deidentifier(text)

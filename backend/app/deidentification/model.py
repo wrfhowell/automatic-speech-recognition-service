@@ -12,9 +12,9 @@ import torch
 from torch import Tensor, nn
 from transformers import BertConfig, BertModel
 
-from app.deid.crf import CRF
-from app.deid.labels import NUM_LABELS
-from app.deid.viterbi import viterbi_decode
+from app.deidentification.crf import CRF
+from app.deidentification.labels import NUM_LABELS
+from app.deidentification.viterbi import viterbi_decode
 
 ENCODER_NAME = "prajjwal1/bert-tiny"
 # bert-tiny's hub repo predates model_type/tokenizer.json; it shares the
@@ -28,7 +28,9 @@ _ENCODER_CONFIG_FILE = "encoder_config.json"
 
 
 class DeidStudent(nn.Module):
-    def __init__(self, encoder: BertModel, dropout: float = 0.1, num_labels: int = NUM_LABELS):
+    def __init__(
+        self, encoder: BertModel, dropout: float = 0.1, num_labels: int = NUM_LABELS
+    ):
         super().__init__()
         self.encoder = encoder
         hidden = encoder.config.hidden_size
@@ -72,6 +74,8 @@ def save_student(model: DeidStudent, artifacts_dir: Path) -> None:
 def load_student(artifacts_dir: Path = ARTIFACTS_DIR) -> DeidStudent:
     config = BertConfig.from_json_file(artifacts_dir / _ENCODER_CONFIG_FILE)
     model = DeidStudent(BertModel(config))
-    state = torch.load(artifacts_dir / _WEIGHTS_FILE, map_location="cpu", weights_only=True)
+    state = torch.load(
+        artifacts_dir / _WEIGHTS_FILE, map_location="cpu", weights_only=True
+    )
     model.load_state_dict(state)
     return model.eval()

@@ -9,7 +9,7 @@ import time
 
 import pytest
 
-from app.deid.model import ARTIFACTS_DIR
+from app.deidentification.model import ARTIFACTS_DIR
 
 pytestmark = pytest.mark.skipif(
     not (ARTIFACTS_DIR / "student.pt").exists(),
@@ -19,7 +19,7 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.fixture(scope="module")
 def deid():
-    from app.deid.inference import Deidentifier
+    from app.deidentification.inference import Deidentifier
 
     return Deidentifier.from_artifacts()
 
@@ -32,7 +32,7 @@ SAMPLE = (
 
 
 def test_segments_tile_text_with_correct_base_offsets(deid):
-    from app.deid.inference import MAX_WORDPIECES, segment_text
+    from app.deidentification.inference import MAX_WORDPIECES, segment_text
 
     long_text = SAMPLE * 20
     segments = segment_text(long_text, deid.tokenizer)
@@ -44,7 +44,7 @@ def test_segments_tile_text_with_correct_base_offsets(deid):
 
 
 def test_oversized_unpunctuated_sentence_is_split(deid):
-    from app.deid.inference import MAX_WORDPIECES, segment_text
+    from app.deidentification.inference import MAX_WORDPIECES, segment_text
 
     blob = "lorem ipsum dolor sit amet " * 60  # no sentence boundaries at all
     segments = segment_text(blob, deid.tokenizer)
@@ -84,15 +84,15 @@ def test_empty_and_whitespace_input_pass_through(deid):
 
 
 def test_committed_metrics_pass_recall_gate():
-    from app.deid.eval import passes_gate
+    from app.deidentification.eval import passes_gate
 
     metrics = json.loads((ARTIFACTS_DIR / "metrics.json").read_text())
     assert passes_gate(metrics), metrics["per_type_recall"]
 
 
 def test_live_recall_on_dense_sample(deid):
-    from app.deid.data.generate import generate_dense_eval
-    from app.deid.eval import evaluate
+    from app.deidentification.data.generate import generate_dense_eval
+    from app.deidentification.eval import evaluate
 
     config = json.loads((ARTIFACTS_DIR / "config.json").read_text())
     docs = generate_dense_eval(config["n_eval_dense"], seed=config["seed_eval"])[:20]

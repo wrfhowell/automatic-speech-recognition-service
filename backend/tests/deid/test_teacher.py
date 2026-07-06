@@ -1,8 +1,13 @@
 import re
 
-from app.deid.data.generate import generate_corpus
-from app.deid.labels import LABEL_TO_ID, O_ID
-from app.deid.teacher import K, annotate_ensemble, soft_labels, spans_to_bio_ids
+from app.deidentification.data.generate import generate_corpus
+from app.deidentification.labels import LABEL_TO_ID, O_ID
+from app.deidentification.teacher import (
+    K,
+    annotate_ensemble,
+    soft_labels,
+    spans_to_bio_ids,
+)
 
 
 def _whitespace_offsets(text: str) -> list[tuple[int, int]]:
@@ -50,7 +55,9 @@ def test_ensemble_union_recall_on_gold_spans():
 
 
 def test_hard_negatives_stay_mostly_clean():
-    docs = [d for d in generate_corpus(200, seed=3) if set(d.families) == {"hard_negative"}]
+    docs = [
+        d for d in generate_corpus(200, seed=3) if set(d.families) == {"hard_negative"}
+    ]
     assert docs
     votes = 0
     tokens = 0
@@ -59,7 +66,9 @@ def test_hard_negatives_stay_mostly_clean():
         for row in soft_labels(doc.text, offsets):
             tokens += 1
             votes += 1.0 - row[O_ID]
-    assert votes / tokens < 0.05, f"teachers hallucinate PHI on {votes / tokens:.1%} of clean tokens"
+    assert (
+        votes / tokens < 0.05
+    ), f"teachers hallucinate PHI on {votes / tokens:.1%} of clean tokens"
 
 
 def test_spans_to_bio_marks_b_then_i():
@@ -67,7 +76,10 @@ def test_spans_to_bio_marks_b_then_i():
     offsets = _whitespace_offsets(text)
     labels = spans_to_bio_ids([(5, 18, "NAME")], offsets)
     assert labels == [
-        O_ID, LABEL_TO_ID["B-NAME"], LABEL_TO_ID["I-NAME"], O_ID,
+        O_ID,
+        LABEL_TO_ID["B-NAME"],
+        LABEL_TO_ID["I-NAME"],
+        O_ID,
     ]
 
 

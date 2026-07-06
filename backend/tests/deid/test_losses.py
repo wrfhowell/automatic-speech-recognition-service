@@ -2,8 +2,8 @@ import math
 
 import torch
 
-from app.deid.crf import CRF
-from app.deid.losses import combined_loss, focal_soft_cross_entropy, harden
+from app.deidentification.crf import CRF
+from app.deidentification.losses import combined_loss, focal_soft_cross_entropy, harden
 
 
 def test_focal_loss_matches_hand_computed_value():
