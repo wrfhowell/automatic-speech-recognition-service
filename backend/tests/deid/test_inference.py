@@ -110,3 +110,19 @@ def test_latency_4000_word_doc(deid):
     # Plan target is <200 ms; assert a generous CI-safe bound and print.
     print(f"4000-word doc: {elapsed * 1000:.0f} ms")
     assert elapsed < 1.0
+
+
+def test_deidentify_is_thread_safe_under_concurrent_stitches():
+    """stitch_job calls deidentify via asyncio.to_thread, and a burst of
+    finishing jobs means genuinely concurrent calls into one shared
+    tokenizer/model. The HF fast tokenizer is not thread-safe ("Already
+    borrowed"), so the module must serialize inference."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    from app.deidentification import deidentify
+
+    doc = SAMPLE * 10  # several segments per call keeps the tokenizer busy
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(lambda _: deidentify(doc), range(40)))
+
+    assert all("[NAME]" in r.masked_text for r in results)
