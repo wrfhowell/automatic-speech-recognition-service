@@ -8,7 +8,7 @@ label is disallowed (the paper's trick; -inf minus -inf poisons gradients).
 import torch
 from torch import Tensor, nn
 
-from app.deid.labels import NUM_LABELS, allowed_starts, allowed_transitions
+from app.deidentification.labels import NUM_LABELS, allowed_starts, allowed_transitions
 
 CONSTRAINT_PENALTY = -1e4
 
@@ -34,7 +34,9 @@ class CRF(nn.Module):
             self.register_buffer("transition_penalty", _transition_penalty())
             self.register_buffer("start_penalty", _start_penalty())
         else:  # tiny label spaces in tests
-            self.register_buffer("transition_penalty", torch.zeros(num_labels, num_labels))
+            self.register_buffer(
+                "transition_penalty", torch.zeros(num_labels, num_labels)
+            )
             self.register_buffer("start_penalty", torch.zeros(num_labels))
 
     def constrained_transitions(self) -> Tensor:
@@ -58,10 +60,9 @@ class CRF(nn.Module):
             1, tags[:, 0:1]
         ).squeeze(1)
         for t in range(1, seq_len):
-            step = (
-                trans[tags[:, t - 1], tags[:, t]]
-                + emissions[:, t].gather(1, tags[:, t : t + 1]).squeeze(1)
-            )
+            step = trans[tags[:, t - 1], tags[:, t]] + emissions[:, t].gather(
+                1, tags[:, t : t + 1]
+            ).squeeze(1)
             score = score + step * mask[:, t]
         last_idx = mask.long().sum(dim=1) - 1
         last_tags = tags.gather(1, last_idx.unsqueeze(1)).squeeze(1)

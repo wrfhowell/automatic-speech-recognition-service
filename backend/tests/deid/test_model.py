@@ -6,8 +6,8 @@ Uses a tiny randomly-initialized BERT config — no network, no hub weights.
 import torch
 from transformers import BertConfig, BertModel
 
-from app.deid.labels import LABELS, NUM_LABELS
-from app.deid.model import DeidStudent, load_student, save_student
+from app.deidentification.labels import LABELS, NUM_LABELS
+from app.deidentification.model import DeidStudent, load_student, save_student
 
 _TINY = BertConfig(
     vocab_size=100,

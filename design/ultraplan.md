@@ -1,49 +1,49 @@
- This plan builds the full system described in DESIGN.md: a FastAPI backend with arq workers coordinated by a global Redis semaphore (the 100-slot ASR vendor cap is the defining constraint), Postgres as source of truth with crash recovery, a CIPHER de-identification stage (full model code + tiny demo training), and a Tufte-styled React demo console — all wired via docker-compose against a user-provided Fastify mock ASR server (/mock-asr, untouched).
+This plan builds the full system described in DESIGN.md: a FastAPI backend with arq workers coordinated by a global Redis semaphore (the 100-slot ASR vendor cap is the defining constraint), Postgres as source of truth with crash recovery, a CIPHER de-identification stage (full model code + tiny demo training), and a Tufte-styled React demo console — all wired via docker-compose against a user-provided Fastify mock ASR server (/mock-asr, untouched).
 
 User decisions: full scope; mock ASR provided by user (build against its contract, confirm exact shape before coding the client); full CIPHER implementation with demo-scale training (bert-tiny, synthetic data, committed weights).
 
 Monorepo layout
 /backend
-  pyproject.toml, Dockerfile, alembic.ini, alembic/versions/0001_initial.py
-  app/
-    main.py, config.py                    # app factory + pydantic-settings
-    api/    deps.py, schemas.py, transcribe.py, transcript.py, health.py
-    models/ base.py, job.py, chunk.py, audit.py, enums.py
-    core/   db.py, semaphore.py, asr_client.py, retry.py, breaker.py, logging.py
-    workers/ main.py, process_chunk.py, stitch_job.py, reconciler.py, queueing.py
-    deid/   labels.py, crf.py, viterbi.py, losses.py, model.py, teacher.py,
-            inference.py, masking.py, train.py, eval.py,
-            data/{templates.py, generate.py, features.py},
-            artifacts/{student.pt, config.json, labels.json, metrics.json, data/*.jsonl}
-  tests/  unit/  integration/  e2e/  deid/
+pyproject.toml, Dockerfile, alembic.ini, alembic/versions/0001_initial.py
+app/
+main.py, config.py # app factory + pydantic-settings
+api/ deps.py, schemas.py, transcribe.py, transcript.py, health.py
+models/ base.py, job.py, chunk.py, audit.py, enums.py
+core/ db.py, semaphore.py, asr_client.py, retry.py, breaker.py, logging.py
+workers/ main.py, process_chunk.py, stitch_job.py, reconciler.py, queueing.py
+deid/ labels.py, crf.py, viterbi.py, losses.py, model.py, teacher.py,
+inference.py, masking.py, train.py, eval.py,
+data/{templates.py, generate.py, features.py},
+artifacts/{student.pt, config.json, labels.json, metrics.json, data/\*.jsonl}
+tests/ unit/ integration/ e2e/ deid/
 /frontend
-  Dockerfile, nginx.conf, vite.config.ts, playwright.config.ts, e2e/smoke.spec.ts
-  src/ api/{schema.d.ts (generated, committed), client.ts, types.ts, queries.ts}
-       lib/{chunks.ts, maskedSpans.ts, format.ts}
-       components/{AppShell, SectionLabel, StatusChip, EvidenceCard,
-                   ChunkStatusStrip, MaskedTranscript, InfiniteSentinel}.tsx
-       pages/{SubmitJob, JobDetail, Search}.tsx  router.tsx  styles/index.css
-/mock-asr             # PROVIDED by user — untouched
+Dockerfile, nginx.conf, vite.config.ts, playwright.config.ts, e2e/smoke.spec.ts
+src/ api/{schema.d.ts (generated, committed), client.ts, types.ts, queries.ts}
+lib/{chunks.ts, maskedSpans.ts, format.ts}
+components/{AppShell, SectionLabel, StatusChip, EvidenceCard,
+ChunkStatusStrip, MaskedTranscript, InfiniteSentinel}.tsx
+pages/{SubmitJob, JobDetail, Search}.tsx router.tsx styles/index.css
+/mock-asr # PROVIDED by user — untouched
 docker-compose.yml, .env.example, Makefile
 Backend deps: fastapi, uvicorn, pydantic-settings, sqlalchemy[asyncio], asyncpg, alembic, arq, redis, httpx, torch (CPU), transformers, faker, numpy. Dev: pytest, pytest-asyncio, respx, fakeredis[lua], testcontainers, ruff.
 Frontend deps: react, react-router-dom, @tanstack/react-query, openapi-fetch, tailwindcss + @tailwindcss/vite (v4). Dev: openapi-typescript, @playwright/test, vitest.
 
 Cross-workstream contracts (decided now)
-Deid interface: app/deid exports deidentify(text: str) -> DeidResult(masked_text: str, spans: list[PhiSpan]) behind a lazy per-process singleton. stitch_job calls it via asyncio.to_thread(...) and stores result.masked_text as transcript_deid. On deid failure the job stays non-terminal and stitch raises so arq retries — never silently serve raw PHI.
+Deid interface: app/deid exports deidentify(text: str) -> DeidResult(masked*text: str, spans: list[PhiSpan]) behind a lazy per-process singleton. stitch_job calls it via asyncio.to_thread(...) and stores result.masked_text as transcript_deid. On deid failure the job stays non-terminal and stitch raises so arq retries — never silently serve raw PHI.
 API response shape: keep chunkStatuses: {[audioPath]: status} exactly per DESIGN.md §3 and add chunks: [{ordinal, audioPath, status, attempts}] (ordered array). Frontend uses chunks (ordering + attempt counts for the retry-dots UI); chunkStatuses stays contract-faithful.
 Raw transcript access: GET /transcript/{jobId}?view=raw returns transcript_text instead of transcript_deid and inserts a row into an audit_log table (job_id, action='RAW_READ', created_at). Frontend fetches it only when the "show raw" toggle is on and the job is terminal (enabled: showRaw && isTerminal), never polled.
-Mask highlighting: frontend parses inline tokens from the masked text with /\[(?:([A-Z][A-Z_]{1,20})|chunk (\d+) unavailable)\]/g — no span coordinates in the API.
+Mask highlighting: frontend parses inline tokens from the masked text with /\[(?:([A-Z]A-Z*]{1,20})|chunk (\d+) unavailable)\]/g — no span coordinates in the API.
 Chunk list for Submit screen: hardcoded constant src/lib/chunks.ts (KNOWN_CHUNKS, POISON_CHUNK = "audio-file-8.wav") — the vendor's audio catalog is demo fixture data, not a real API surface. Duplicate selection prevented in UI.
 ASR vendor contract: confirmed from the provided /mock-asr source before coding; quarantined in core/asr_client.py (the only vendor-aware module). Also confirm whether the mock exposes a max-in-flight counter; fallback concurrency proof is the semaphore's own Redis high-water-mark key.
 Data model (0001_initial Alembic migration)
 jobs(id uuid PK default gen_random_uuid(), user_id text, status text CHECK(...),
-     pending_chunks int NOT NULL,          -- stitch-trigger counter, seeded to N
-     transcript_text text, transcript_deid text,
-     idempotency_key text UNIQUE,          -- PG default = NULLS DISTINCT
-     created_at timestamptz default now(), completed_time timestamptz)
+pending_chunks int NOT NULL, -- stitch-trigger counter, seeded to N
+transcript_text text, transcript_deid text,
+idempotency_key text UNIQUE, -- PG default = NULLS DISTINCT
+created_at timestamptz default now(), completed_time timestamptz)
 chunks(id uuid PK, job_id FK ON DELETE CASCADE, ordinal int, audio_path text,
-       status text CHECK(...), attempts int default 0, transcript_text text,
-       last_error text, created_at, updated_at, UNIQUE(job_id, ordinal))
+status text CHECK(...), attempts int default 0, transcript_text text,
+last_error text, created_at, updated_at, UNIQUE(job_id, ordinal))
 audit_log(id PK, job_id FK, action text, created_at)
 -- indexes: chunks(job_id); partial chunks(status, updated_at) WHERE status IN ('PENDING','PROCESSING');
 -- jobs(user_id, status, created_at DESC, id DESC); jobs(status, created_at DESC, id DESC); jobs(created_at DESC, id DESC)
@@ -89,7 +89,7 @@ Losses (losses.py): focal soft CE with p̂_t = student prob of teacher-argmax la
 Teacher: K=5 deliberately-varied rule/gazetteer annotators over synthetic data with gold spans (controlled perturbations: title inclusion, bare-year DATE, over-extended phones, smaller name gazetteer, "of <City>" LOC) → genuine boundary disagreement → fractional soft labels. CPU-free, deterministic, minutes to train — the pragmatic substitute for the paper's LLM ensemble (rejected alternative documented).
 Data (data/): ~50 templates × 4 families (dialogue, intake, narrative, PHI-free hard negatives — lab values, doses, eponyms, since bert-tiny is uncased), Faker fillers with seeded RNG, spans recorded during string assembly (correct by construction). Outlier-aware sampling: 14 lexical features, robust Z (MAD), 2,500 candidates → 90% stratified + 10% |z|>2 oversample → 2,000 train docs; 300 val; 150 entity-dense eval docs (≥40 instances/type — makes the recall number meaningful and the demo transcript visually saturated).
 Inference (inference.py + masking.py): sentence-segment to ≤128 wordpieces, batch-tokenize with fast tokenizer return_offsets_mapping=True, one forward + one batched Viterbi, BIO→char spans (open at B-X or orphan I-X — recall-first repair), whitespace-merge, rebuild masked string from slices. masking.py is torch-free pure string logic. Target: <200 ms for a 4,000-word doc on CPU.
-Training: python -m app.deid.train (AdamW, 4 epochs, batch 32, lr head 5e-4 / encoder 1e-4, seed 13) ≈ 2–5 min CPU. Artifacts committed to the repo (~18 MB student.pt + config.json + metrics.json with the paper's 19-pt synthetic-only caveat printed verbatim) so the demo works on first clone; make deid regenerates from scratch. Acceptance gate: eval_dense recall ≥ 0.90, per-type ≥ 0.85; if short, fall back to unioning model spans with high-precision PHONE/MRN/DATE regexes behind a flag (defensible per §11 recall-first).
+Training: python -m app.deidentification.train (AdamW, 4 epochs, batch 32, lr head 5e-4 / encoder 1e-4, seed 13) ≈ 2–5 min CPU. Artifacts committed to the repo (~18 MB student.pt + config.json + metrics.json with the paper's 19-pt synthetic-only caveat printed verbatim) so the demo works on first clone; make deid regenerates from scratch. Acceptance gate: eval_dense recall ≥ 0.90, per-type ≥ 0.85; if short, fall back to unioning model spans with high-precision PHONE/MRN/DATE regexes behind a flag (defensible per §11 recall-first).
 Frontend — React demo console
 Stack: Vite + TS + Tailwind v4 (@theme block pasted verbatim from frontend-design.txt; Google Fonts in index.html; theme-color #F3ECDC; no component library). Codegen: openapi-typescript → committed schema.d.ts + openapi-fetch typed client (baseUrl: "", same-origin everywhere).
 Routes: / Submit, /jobs/:jobId JobDetail, /search — under an AppShell (1320px, sticky ~11.5rem left nav, hairline dividers, mono uppercase labels).
@@ -112,17 +112,11 @@ Worker happy path (process_chunk without failure branches, finish_chunk, stitch 
 Failure taxonomy (retry/404/exhaustion/429/no-permit). Verify: permit released on every exit path (ZCARD==0); poison chunk e2e → COMPLETED_WITH_ERRORS, attempts=4, marker inline.
 Reconciler + crash recovery. Verify: manual docker compose kill -s SIGKILL worker → restart → completes; then automated e2e.
 Concurrency proof e2e: ~40 jobs × 8 chunks burst; assert semaphore hwm ≤ 90 (+ mock max-in-flight ≤ 100 if exposed); all jobs terminal.
-Deid (parallelizable with backend 4–9; integrates at step 15)
-10. labels + masking (torch-free) → tests. 11. crf + viterbi → vs brute-force tests. 12. losses → hand-computed-value tests. 13. templates/generate/features + teacher → datagen & boundary-disagreement tests. 14. train + eval, run make deid. Verify: eval_dense recall ≥ 0.90 in metrics.json; one --hard-labels ablation for the presentation. 15. inference + swap stitch stub → real deidentify. Verify: e2e job shows masked transcript; audit row on ?view=raw.
+Deid (parallelizable with backend 4–9; integrates at step 15) 10. labels + masking (torch-free) → tests. 11. crf + viterbi → vs brute-force tests. 12. losses → hand-computed-value tests. 13. templates/generate/features + teacher → datagen & boundary-disagreement tests. 14. train + eval, run make deid. Verify: eval_dense recall ≥ 0.90 in metrics.json; one --hard-labels ablation for the presentation. 15. inference + swap stitch stub → real deidentify. Verify: e2e job shows masked transcript; audit row on ?view=raw.
 
-Frontend (parallelizable once API shape stabilizes at step 3)
-16. Scaffold + theme + AppShell + shared primitives. Verify: parchment page, serif 18px body, no blue focus rings.
-17. API layer (codegen, commit schema.d.ts, queries). Verify: tsc clean.
-18. Submit page. 19. JobDetail (polling, strip, masked transcript, raw toggle). Verify: watch live fan-out; Network tab shows 1 s polls that stop at terminal; kill-the-worker stall+recovery visible. 20. Search (infinite scroll). Verify: seed ~30 jobs, cursor pages of 20.
-21. Docker/nginx + compose integration. 22. Playwright smoke (submit 3 chunks + poison → terminal ≤75 s → data-mask spans + gap marker visible). Verify: green twice in a row.
+Frontend (parallelizable once API shape stabilizes at step 3) 16. Scaffold + theme + AppShell + shared primitives. Verify: parchment page, serif 18px body, no blue focus rings. 17. API layer (codegen, commit schema.d.ts, queries). Verify: tsc clean. 18. Submit page. 19. JobDetail (polling, strip, masked transcript, raw toggle). Verify: watch live fan-out; Network tab shows 1 s polls that stop at terminal; kill-the-worker stall+recovery visible. 20. Search (infinite scroll). Verify: seed ~30 jobs, cursor pages of 20. 21. Docker/nginx + compose integration. 22. Playwright smoke (submit 3 chunks + poison → terminal ≤75 s → data-mask spans + gap marker visible). Verify: green twice in a row.
 
-Finish
-23. PHI-log audit (grep: no handler logs transcript/audio paths), README (run instructions, make deid, demo script incl. kill -9 walkthrough), optional k6 smoke.
+Finish 23. PHI-log audit (grep: no handler logs transcript/audio paths), README (run instructions, make deid, demo script incl. kill -9 walkthrough), optional k6 smoke.
 
 Top correctness risks (addressed by design)
 Double-stitch / no-stitch: decrement only inside the guarded terminal transition's transaction (exactly-once), atomic RETURNING pending_chunks serializes on the row lock (exactly one sees 0), stitch itself idempotent + guarded, reconciler C backstops the commit→enqueue gap.

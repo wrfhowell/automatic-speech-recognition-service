@@ -4,8 +4,8 @@ Torch-free by design. The masked string is rebuilt from slices of the
 original text, so every non-PHI character is preserved byte-for-byte —
 masking is span-replacement, never generative (§8.3)."""
 
-from app.deid import PhiSpan
-from app.deid.labels import mask_token
+from app.deidentification import PhiSpan
+from app.deidentification.labels import mask_token
 
 
 def bio_to_spans(

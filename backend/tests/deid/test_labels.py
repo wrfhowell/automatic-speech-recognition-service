@@ -1,4 +1,4 @@
-from app.deid.labels import (
+from app.deidentification.labels import (
     LABEL_TO_ID,
     LABELS,
     NUM_LABELS,

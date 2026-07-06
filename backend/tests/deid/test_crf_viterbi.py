@@ -1,14 +1,17 @@
 import torch
 
-from app.deid.crf import CONSTRAINT_PENALTY, CRF
-from app.deid.labels import LABEL_TO_ID, NUM_LABELS
-from app.deid.viterbi import brute_force_decode, viterbi_decode
+from app.deidentification.crf import CONSTRAINT_PENALTY, CRF
+from app.deidentification.labels import LABEL_TO_ID, NUM_LABELS
+from app.deidentification.viterbi import brute_force_decode, viterbi_decode
 
 
 def _decode_with(crf: CRF, emissions, mask):
     return viterbi_decode(
-        emissions, mask,
-        crf.constrained_transitions(), crf.constrained_starts(), crf.end_transitions,
+        emissions,
+        mask,
+        crf.constrained_transitions(),
+        crf.constrained_starts(),
+        crf.end_transitions,
     )
 
 
@@ -57,9 +60,10 @@ def test_constrained_decode_never_emits_illegal_bio():
             label = list(LABEL_TO_ID)[label_id]
             if label.startswith("I-"):
                 entity = label[2:]
-                assert prev is not None and prev in (f"B-{entity}", f"I-{entity}"), (
-                    f"illegal {label} after {prev}: {paths}"
-                )
+                assert prev is not None and prev in (
+                    f"B-{entity}",
+                    f"I-{entity}",
+                ), f"illegal {label} after {prev}: {paths}"
             prev = label
     # The high-emission I-NAME region must have been realized as B-NAME -> I-NAME...
     assert LABEL_TO_ID["B-NAME"] in paths[0]

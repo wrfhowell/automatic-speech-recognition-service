@@ -7,7 +7,7 @@ patches deid to identity — see conftest). Skips until artifacts exist.
 import pytest
 from sqlalchemy import select
 
-from app.deid.model import ARTIFACTS_DIR
+from app.deidentification.model import ARTIFACTS_DIR
 from app.models import Chunk, Job
 from app.workers.stitch_job import stitch_job
 
@@ -32,7 +32,9 @@ async def test_stitch_masks_phi_and_preserves_raw(app, worker_ctx):
         app, chunk_statuses=["COMPLETED", "COMPLETED"]
     )
     async with app.state.sessionmaker() as session:
-        chunks = (await session.scalars(select(Chunk).where(Chunk.job_id == job_id))).all()
+        chunks = (
+            await session.scalars(select(Chunk).where(Chunk.job_id == job_id))
+        ).all()
         for chunk in sorted(chunks, key=lambda c: c.ordinal):
             chunk.transcript_text = CHUNK_TEXTS[chunk.ordinal]
         await session.commit()

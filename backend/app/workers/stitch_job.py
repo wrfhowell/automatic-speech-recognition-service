@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select, update
 
 from app.core.logging import get_logger
-from app.deid import deidentify
+from app.deidentification import deidentify
 from app.models import (
     TERMINAL_CHUNK_STATUSES,
     TERMINAL_JOB_STATUSES,
