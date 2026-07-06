@@ -1,4 +1,4 @@
-.PHONY: up down logs test unit integration e2e deid lint psql frontend-test smoke
+.PHONY: up down logs test unit integration e2e deid lint psql frontend-test smoke loadtest
 
 up:
 	docker compose up --build -d
@@ -36,3 +36,8 @@ frontend-test:
 # Playwright smoke against the running compose stack (make up first).
 smoke:
 	cd frontend && npm run e2e
+
+# Burst load test against the running compose stack (make up first);
+# prints a markdown report — see design/loadtest-results.md for a run.
+loadtest:
+	@cd backend && uv run python scripts/loadtest.py
