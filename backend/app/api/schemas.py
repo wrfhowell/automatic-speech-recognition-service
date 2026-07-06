@@ -48,3 +48,32 @@ class TranscriptResult(ApiModel):
 class SearchResponse(ApiModel):
     results: list[TranscriptResult]
     next_cursor: str | None = None
+
+
+class SemaphoreStats(ApiModel):
+    held: int
+    high_water_mark: int
+    capacity: int
+
+
+class QueueStats(ApiModel):
+    depth: int
+
+
+class ChunkStats(ApiModel):
+    by_status: dict[str, int]
+    total_retries: int
+
+
+class LatencyStats(ApiModel):
+    completed_jobs: int
+    p50_seconds: float | None
+    p95_seconds: float | None
+
+
+class OpsResponse(ApiModel):
+    semaphore: SemaphoreStats
+    queue: QueueStats
+    jobs: dict[str, int]
+    chunks: ChunkStats
+    latency: LatencyStats
