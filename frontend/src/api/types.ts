@@ -3,6 +3,7 @@ import type { components } from "./schema";
 export type TranscriptResult = components["schemas"]["TranscriptResult"];
 export type ChunkInfo = components["schemas"]["ChunkInfo"];
 export type SearchResponse = components["schemas"]["SearchResponse"];
+export type OpsResponse = components["schemas"]["OpsResponse"];
 
 export const JOB_STATUSES = [
   "PENDING",

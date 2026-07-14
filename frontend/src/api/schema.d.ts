@@ -21,6 +21,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ops/loadtest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Loadtest
+         * @description Burst-submit synthetic jobs so the System panel shows the semaphore
+         *     working the vendor cap live. Same insert-then-enqueue path as /transcribe;
+         *     the high-water mark is reset so the burst is measured from zero.
+         */
+        post: operations["loadtest_ops_loadtest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ops": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ops */
+        get: operations["ops_ops_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/transcribe": {
         parameters: {
             query?: never;
@@ -87,10 +126,64 @@ export interface components {
             /** Attempts */
             attempts: number;
         };
+        /** ChunkStats */
+        ChunkStats: {
+            /** Bystatus */
+            byStatus: {
+                [key: string]: number;
+            };
+            /** Totalretries */
+            totalRetries: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** LatencyStats */
+        LatencyStats: {
+            /** Completedjobs */
+            completedJobs: number;
+            /** P50Seconds */
+            p50Seconds: number | null;
+            /** P95Seconds */
+            p95Seconds: number | null;
+        };
+        /** LoadTestRequest */
+        LoadTestRequest: {
+            /**
+             * Jobs
+             * @default 40
+             */
+            jobs: number;
+            /**
+             * Chunks
+             * @default 8
+             */
+            chunks: number;
+        };
+        /** LoadTestResponse */
+        LoadTestResponse: {
+            /** Jobssubmitted */
+            jobsSubmitted: number;
+            /** Chunkssubmitted */
+            chunksSubmitted: number;
+        };
+        /** OpsResponse */
+        OpsResponse: {
+            semaphore: components["schemas"]["SemaphoreStats"];
+            queue: components["schemas"]["QueueStats"];
+            /** Jobs */
+            jobs: {
+                [key: string]: number;
+            };
+            chunks: components["schemas"]["ChunkStats"];
+            latency: components["schemas"]["LatencyStats"];
+        };
+        /** QueueStats */
+        QueueStats: {
+            /** Depth */
+            depth: number;
         };
         /** SearchResponse */
         SearchResponse: {
@@ -98,6 +191,15 @@ export interface components {
             results: components["schemas"]["TranscriptResult"][];
             /** Nextcursor */
             nextCursor?: string | null;
+        };
+        /** SemaphoreStats */
+        SemaphoreStats: {
+            /** Held */
+            held: number;
+            /** Highwatermark */
+            highWaterMark: number;
+            /** Capacity */
+            capacity: number;
         };
         /** TranscribeRequest */
         TranscribeRequest: {
@@ -176,6 +278,59 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    loadtest_ops_loadtest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoadTestRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoadTestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ops_ops_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpsResponse"];
                 };
             };
         };

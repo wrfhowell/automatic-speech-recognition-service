@@ -2,6 +2,11 @@ export function shortId(id: string): string {
   return id.slice(0, 8);
 }
 
+export function formatSeconds(seconds: number | null | undefined): string {
+  if (seconds == null) return "—";
+  return `${seconds.toFixed(1)} s`;
+}
+
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);

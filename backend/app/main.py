@@ -6,7 +6,7 @@ from arq.connections import RedisSettings
 from fastapi import FastAPI
 from redis.asyncio import Redis
 
-from app.api import health, transcribe, transcript
+from app.api import health, ops, transcribe, transcript
 from app.config import get_settings
 from app.core.db import create_engine, create_sessionmaker
 from app.core.logging import configure_logging
@@ -37,6 +37,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(title="Transcription Service", lifespan=lifespan)
     app.include_router(health.router)
+    app.include_router(ops.router)
     app.include_router(transcribe.router)
     app.include_router(transcript.router)
     return app

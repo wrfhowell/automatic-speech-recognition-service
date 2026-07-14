@@ -22,6 +22,20 @@ function QuillIcon() {
   );
 }
 
+function GaugeIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M2.5 11.5a5.5 5.5 0 1 1 11 0"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+      />
+      <path d="M8 11.5l3-4" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function LedgerIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -52,6 +66,9 @@ export function AppShell() {
             </NavLink>
             <NavLink to="/search" className={navLinkClass}>
               <LedgerIcon /> Records
+            </NavLink>
+            <NavLink to="/system" className={navLinkClass}>
+              <GaugeIcon /> System
             </NavLink>
           </nav>
           <footer className="mt-10 border-t border-border pt-4 font-mono text-[9px] tracking-widest uppercase text-faint leading-relaxed">

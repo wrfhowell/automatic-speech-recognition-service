@@ -4,7 +4,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { client } from "./client";
-import type { SearchResponse, TranscriptResult } from "./types";
+import type { OpsResponse, SearchResponse, TranscriptResult } from "./types";
 
 export class HttpError extends Error {
   constructor(public status: number) {
@@ -38,6 +38,28 @@ export function rawTranscriptQuery(jobId: string) {
     queryFn: () => fetchTranscript(jobId, "raw"),
     staleTime: Infinity,
   });
+}
+
+/** Live operational counters for the System panel; polls while mounted. */
+export function opsQuery() {
+  return queryOptions({
+    queryKey: ["ops"],
+    queryFn: async (): Promise<OpsResponse> => {
+      const { data, response } = await client.GET("/ops");
+      if (!data) throw new HttpError(response.status);
+      return data;
+    },
+    refetchInterval: 1000,
+  });
+}
+
+/** Burst-submit synthetic jobs; the polled ops counters show the effect. */
+export async function runLoadTest(): Promise<{ jobsSubmitted: number }> {
+  const { data, response } = await client.POST("/ops/loadtest", {
+    body: { jobs: 40, chunks: 8 },
+  });
+  if (!data) throw new HttpError(response.status);
+  return data;
 }
 
 export interface SearchFilters {

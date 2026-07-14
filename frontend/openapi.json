@@ -27,6 +27,63 @@
         }
       }
     },
+    "/ops/loadtest": {
+      "post": {
+        "summary": "Loadtest",
+        "description": "Burst-submit synthetic jobs so the System panel shows the semaphore\nworking the vendor cap live. Same insert-then-enqueue path as /transcribe;\nthe high-water mark is reset so the burst is measured from zero.",
+        "operationId": "loadtest_ops_loadtest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoadTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoadTestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ops": {
+      "get": {
+        "summary": "Ops",
+        "operationId": "ops_ops_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/transcribe": {
       "post": {
         "summary": "Submit Transcription",
@@ -260,6 +317,27 @@
         ],
         "title": "ChunkInfo"
       },
+      "ChunkStats": {
+        "properties": {
+          "byStatus": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Bystatus"
+          },
+          "totalRetries": {
+            "type": "integer",
+            "title": "Totalretries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "byStatus",
+          "totalRetries"
+        ],
+        "title": "ChunkStats"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -272,6 +350,126 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "LatencyStats": {
+        "properties": {
+          "completedJobs": {
+            "type": "integer",
+            "title": "Completedjobs"
+          },
+          "p50Seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P50Seconds"
+          },
+          "p95Seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P95Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "completedJobs",
+          "p50Seconds",
+          "p95Seconds"
+        ],
+        "title": "LatencyStats"
+      },
+      "LoadTestRequest": {
+        "properties": {
+          "jobs": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Jobs",
+            "default": 40
+          },
+          "chunks": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Chunks",
+            "default": 8
+          }
+        },
+        "type": "object",
+        "title": "LoadTestRequest"
+      },
+      "LoadTestResponse": {
+        "properties": {
+          "jobsSubmitted": {
+            "type": "integer",
+            "title": "Jobssubmitted"
+          },
+          "chunksSubmitted": {
+            "type": "integer",
+            "title": "Chunkssubmitted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobsSubmitted",
+          "chunksSubmitted"
+        ],
+        "title": "LoadTestResponse"
+      },
+      "OpsResponse": {
+        "properties": {
+          "semaphore": {
+            "$ref": "#/components/schemas/SemaphoreStats"
+          },
+          "queue": {
+            "$ref": "#/components/schemas/QueueStats"
+          },
+          "jobs": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Jobs"
+          },
+          "chunks": {
+            "$ref": "#/components/schemas/ChunkStats"
+          },
+          "latency": {
+            "$ref": "#/components/schemas/LatencyStats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "semaphore",
+          "queue",
+          "jobs",
+          "chunks",
+          "latency"
+        ],
+        "title": "OpsResponse"
+      },
+      "QueueStats": {
+        "properties": {
+          "depth": {
+            "type": "integer",
+            "title": "Depth"
+          }
+        },
+        "type": "object",
+        "required": [
+          "depth"
+        ],
+        "title": "QueueStats"
       },
       "SearchResponse": {
         "properties": {
@@ -299,6 +497,29 @@
           "results"
         ],
         "title": "SearchResponse"
+      },
+      "SemaphoreStats": {
+        "properties": {
+          "held": {
+            "type": "integer",
+            "title": "Held"
+          },
+          "highWaterMark": {
+            "type": "integer",
+            "title": "Highwatermark"
+          },
+          "capacity": {
+            "type": "integer",
+            "title": "Capacity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "held",
+          "highWaterMark",
+          "capacity"
+        ],
+        "title": "SemaphoreStats"
       },
       "TranscribeRequest": {
         "properties": {

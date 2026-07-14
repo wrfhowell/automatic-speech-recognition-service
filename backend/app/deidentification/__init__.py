@@ -24,6 +24,11 @@ class DeidResult:
 
 _deidentifier = None
 _load_lock = threading.Lock()
+# The HF fast tokenizer (and the shared model) are not thread-safe: concurrent
+# calls raise "Already borrowed" from the tokenizer's Rust core. Stitch tasks
+# call deidentify from worker threads (asyncio.to_thread), so inference is
+# serialized per process — it's a single CPU-bound model either way.
+_infer_lock = threading.Lock()
 
 
 def deidentify(text: str) -> DeidResult:
@@ -34,4 +39,5 @@ def deidentify(text: str) -> DeidResult:
                 from app.deidentification.inference import Deidentifier
 
                 _deidentifier = Deidentifier.from_artifacts()
-    return _deidentifier(text)
+    with _infer_lock:
+        return _deidentifier(text)
