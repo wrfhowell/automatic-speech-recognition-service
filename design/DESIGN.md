@@ -235,7 +235,7 @@ The paper's core result: distill a K-model LLM ensemble's **soft BIO labels** in
 - **Outlier-aware sampling** — robust Z-scores (MAD) over 14 lexical features; 90% stratified + 10% outlier oversampling.
 - **Evaluation framing** — recall and cost as the two axes; report recall/precision/F1 with ablations.
 
-### 8.2 Take-home substitutions (honest, stated up front)
+### 8.2 Take-home substitutions vs CIPHER paper
 
 | Paper | This submission | Consequence |
 |---|---|---|
@@ -290,7 +290,7 @@ Deliberately out of scope: auth UI, websockets (polling matches the API contract
 
 ---
 
-## 11. Production-readiness gaps (say these before they're asked)
+## 11. Production-readiness gaps
 
 - Webhooks/SSE for job completion instead of polling.
 - OpenTelemetry traces (job → chunks → ASR spans), RED metrics, alert on breaker-open & queue depth.
