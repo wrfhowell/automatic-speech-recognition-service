@@ -1,7 +1,6 @@
 # Transcription Service — System Design
 
-**Take-home for Ambience · Backend Transcription Service**
-Author: (you) · Time-boxed to ~8 hours of implementation · This doc doubles as the 15–20 min presentation script.
+**Backend Transcription Service**
 
 ---
 
@@ -13,7 +12,7 @@ Author: (you) · Time-boxed to ~8 hours of implementation · This doc doubles as
 2. **Users can fetch a job's result** (`GET /transcript/{jobId}`) — a stitched transcript, per-chunk statuses, job status, and completion time.
 3. **Users can search jobs** (`GET /transcript/search?jobStatus=&userId=`) across all time, with both filters optional.
 
-*Bonus (this submission):* **Clinical de-identification** — transcripts are PHI-masked before they are searchable, using a distilled encoder+CRF student model (CIPHER, §8).
+* **Clinical de-identification** — transcripts are PHI-masked before they are searchable, using a distilled encoder+CRF student model (CIPHER, §8).
 
 ### 1.2 Non-functional (the ones that shape the design)
 
@@ -127,7 +126,7 @@ chunks(id PK, job_id FK, ordinal int, audio_path, status,
 
 | Decision | Chose | Alternative considered | Why |
 |---|---|---|---|
-| Backend | **Python / FastAPI** | Node/Fastify | Pydantic gives typed request/response contracts for free; async-native for I/O-bound fan-out. The Fastify starter is the *vendor mock*, not our service — the take-home explicitly says use your strongest stack |
+| Backend | **Python / FastAPI** | Node/Fastify | Pydantic gives typed request/response contracts for free; async-native for I/O-bound fan-out. The Fastify starter is the *vendor mock*, not our service|
 | Source of truth | Postgres + SQLAlchemy 2.0 (async) + Alembic | DynamoDB | Transactions for job+chunks atomicity; relational search endpoint is free; migrations are reviewable; boring and right |
 | Workers/queue | **arq** (asyncio jobs on Redis) | Celery | ASR calls are pure I/O — one asyncio worker process comfortably holds dozens of in-flight HTTP calls, which matches the semaphore model exactly. Celery is the battle-tested alternative but its prefork model wastes a process per in-flight request; I'd accept Celery+gevent in review |
 | ASR HTTP client | httpx (async, explicit timeouts) | aiohttp | First-class timeout API; respx makes it trivially testable |
@@ -235,7 +234,7 @@ The paper's core result: distill a K-model LLM ensemble's **soft BIO labels** in
 - **Outlier-aware sampling** — robust Z-scores (MAD) over 14 lexical features; 90% stratified + 10% outlier oversampling.
 - **Evaluation framing** — recall and cost as the two axes; report recall/precision/F1 with ablations.
 
-### 8.2 Take-home substitutions vs CIPHER paper
+### 8.2 What I did vs CIPHER paper
 
 | Paper | This submission | Consequence |
 |---|---|---|
@@ -265,7 +264,7 @@ Because masking is **token-span-level, not generative**, clinical meaning is pre
 
 ## 9. Frontend — React demo console
 
-The take-home is backend-weighted, so the frontend's job is to make the backend's guarantees *visible* in the live demo, not to be a product. Vite + TypeScript + TanStack Query; the API client is generated from FastAPI's OpenAPI schema so the contract is typed end-to-end.
+so the frontend's job is to make the backend's guarantees *visible* in the live demo, not to be a product. Vite + TypeScript + TanStack Query; the API client is generated from FastAPI's OpenAPI schema so the contract is typed end-to-end.
 
 Three screens:
 
@@ -300,14 +299,3 @@ Deliberately out of scope: auth UI, websockets (polling matches the API contract
 - Speaker diarization as a post-ASR enrichment stage — same pipeline slot as deid, which is exactly why the stitch stage is a small pipeline, not a function.
 - Deid: threshold tuning toward recall (a missed name is worse than an over-mask), human-review sampling loop, drift monitoring on entity-rate per note.
 
----
-
-## 12. Presentation flow (15–20 min)
-
-1. **(2 min)** Problem restatement + the three numbers that matter: 100-slot global cap, 5–10 s per call, <20 s target.
-2. **(3 min)** Napkin math → why a shared semaphore, why async 202, why per-chunk isolation.
-3. **(5 min)** Architecture diagram walk, left→right, one endpoint at a time; data model.
-4. **(4 min)** Deep dives: limiter w/ TTL leases; failure taxonomy; crash recovery invariant.
-5. **(3 min)** Live demo in the React console: submit (with the poison chunk included) → watch the per-chunk strip fan out and retry → `kill -9` the worker → watch the stall → restart → completion → de-identified transcript with a "show raw" audit event; then show the concurrency-proof test passing in the terminal.
-6. **(2 min)** 10× growth levers; deid/CIPHER bonus; production gaps.
-7. Leave room for questions — especially on the semaphore and the CRF, the two pieces of genuinely interesting engineering.
