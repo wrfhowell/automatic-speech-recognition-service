@@ -2,7 +2,7 @@
 
 An audio-transcription job service: clients submit jobs of audio chunks, workers fan the chunks out to a flaky third-party ASR vendor under a **hard 100-concurrent-request cap**, and the stitched transcript comes back **de-identified by default** — PHI masked by a small on-device NER model before anything is served.
 
-Built for the [take-home brief](design/task.txt); the full system design (requirements, trade-offs, scaling to 10× DAU) is in [design/DESIGN.md](design/DESIGN.md).
+The full system design (requirements, trade-offs, scaling to 10× DAU) is in [design/DESIGN.md](design/DESIGN.md).
 
 ```mermaid
 flowchart LR
