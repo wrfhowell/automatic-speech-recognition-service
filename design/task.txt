@@ -1,10 +1,10 @@
-# Backend Transcription Take-Home
+# Backend Transcription 
 
 You're tasked with building an audio transcription service that transcribes audio files of patient/provider conversations and returns transcripts. Clients will submit jobs containing chunks of audio they would like transcribed and stitched into a single transcript. For now, these audio chunks will just be one of a few hardcoded URI strings. You will not implement the ASR (Automatic Speech Recognition) model directly — we'll provide mocked APIs which simulate making an API call to an ASR model hosted on another machine.
 
 ## What we're evaluating
 
-Build this **as if you were shipping it to production at Ambience**, not as a proof of concept. The closer your submitted code is to a real production system, the stronger the signal. We'll evaluate both your system design and your implementation.
+Build this **as if you were shipping it to production, not as a proof of concept. The closer your submitted code is to a real production system, the stronger the signal. We'll evaluate both your system design and your implementation.
 
 ## ASR characteristics
 
@@ -57,7 +57,6 @@ GET /transcript/search
 
 - **You need to support 1,000 daily active users today.**
 - **We expect traffic to grow ~10x within 6 months** as we sign new enterprise contracts. Your system should be scalable so we can grow into that.
-- **In your presentation and/or system diagram, walk us through how your design handles this growth** — which levers you'd pull, what scales as-is, what needs to change, and the tradeoffs you considered.
 
 Workload datapoints to anchor sizing:
 
@@ -65,32 +64,5 @@ Workload datapoints to anchor sizing:
 - Visits are usually 30 minutes, but sometimes can spike to 120 minutes
 - Human speech generally contains ~140 words per minute
 - Audio files are ~ 1MB per minute
-
-## Time budget
-
-Time-box this to ~**8 hours**.
-
-## AI tools
-
-**We encourage you to use AI tools** (Claude Code, Cursor, Copilot, etc.) — this is how we work day-to-day. Feel free to check in any prompts, agent configs, test harnesses, or tooling you built alongside your code; we'll review them as part of your submission. 
-
-## Language and frameworks
-
-Use the language and framework you're most familiar with. This isn't the time to learn something new — we want to see you at your best.
-
-## Deliverables
-
-Build your solution in a **private git repository**.
-
-Please share your **GitHub handle** with your recruiter/coordinator so we can match access correctly and avoid username/email mismatches. When you're ready to schedule your presentation, let your recruiter know and share your **availability for a 1-hour Google Meet discussion.**
-
-Once your presentation is scheduled, your recruiter/coordinator will let you know the **2–3 specific interviewers and hiring managers** to add as collaborators on your repo. Please add them **at least 24 hours before your presentation** so they can review your code and prepare focused questions.
-
-Here are some things we look for in take-home submissions & presentations:
-
-- System design that covers all functional requirements
-- Clear system design diagram and excellent communication in presentation
-- Clean, correct, and maintainable code with live working demo
-- Deep understanding of technologies and frameworks used in project
 
 ##
