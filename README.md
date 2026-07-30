@@ -77,7 +77,7 @@ Backend tests run with `uv` and need Docker (testcontainers).
 
 ## De-identification (CIPHER at take-home scale)
 
-`backend/app/deidentification/` implements a [CIPHER](https://arxiv.org/abs/2510.01551)-style student: a rule-ensemble teacher with deliberately varied annotators produces soft labels over synthetic clinical text, distilled (focal soft CE + CRF NLL) into a `bert-tiny` + CRF tagger with batched Viterbi decoding. Six PHI types, recall-first posture (`AGE` masked unconditionally, orphan `I-X` spans repaired open).
+`backend/app/deidentification/` implements a [CIPHER](https://latenthealth.com/cipher)-style student: a rule-ensemble teacher with deliberately varied annotators produces soft labels over synthetic clinical text, distilled (focal soft CE + CRF NLL) into a `bert-tiny` + CRF tagger with batched Viterbi decoding. Six PHI types, recall-first posture (`AGE` masked unconditionally, orphan `I-X` spans repaired open).
 
 Trained weights are committed (~18 MB) so the demo works on first clone; `make deid` retrains from scratch in ~1 min on CPU. Current [metrics](backend/app/deidentification/artifacts/metrics.json): **0.98 overall recall, ≥ 0.93 per type** — on synthetic, in-distribution data only. The CIPHER paper reports a ~19-point F1 drop moving to real clinical text; these numbers certify the pipeline, not clinical-grade performance.
 
